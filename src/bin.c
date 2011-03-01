@@ -601,11 +601,11 @@ static node_t *parse_message( void ) {
             n = parse_serverdata( bits );
             break;
         case mvd_multicast_all:
-        case mvd_multicast_pvs:
         case mvd_multicast_phs:
+        case mvd_multicast_pvs:
         case mvd_multicast_all_r:
-        case mvd_multicast_pvs_r:
         case mvd_multicast_phs_r:
+        case mvd_multicast_pvs_r:
             n = parse_multicast( cmd, bits );
             break;
         case mvd_unicast:

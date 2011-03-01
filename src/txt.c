@@ -794,10 +794,10 @@ static node_t *parse_multicast( void ) {
     expect( "{" );
     while( 1 ) {
         tok = parse();
-        if( !strcmp( tok, "leafnum_pvs" ) ) {
+        if( !strcmp( tok, "leafnum_phs" ) ) {
             m->leafnum = parse_uint16();
             m->type = 1;
-        } else if( !strcmp( tok, "leafnum_phs" ) ) {
+        } else if( !strcmp( tok, "leafnum_pvs" ) ) {
             m->leafnum = parse_uint16();
             m->type = 2;
         } else if( !strcmp( tok, "reliable" ) ) {
@@ -1373,8 +1373,8 @@ static void write_multicast( multicast_t *m ) {
     begin_block( "multicast" );
     if( m->reliable ) write_tok( "reliable" );
     switch( m->type ) {
-        case 1: write_int( "leafnum_pvs", m->leafnum ); break;
-        case 2: write_int( "leafnum_phs", m->leafnum ); break;
+        case 1: write_int( "leafnum_phs", m->leafnum ); break;
+        case 2: write_int( "leafnum_pvs", m->leafnum ); break;
     }
     write_data( m->data );
     end_block();

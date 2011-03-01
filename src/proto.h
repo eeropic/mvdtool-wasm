@@ -65,11 +65,11 @@ typedef enum {
     mvd_unicast,
     mvd_unicast_r,
     mvd_multicast_all,
-    mvd_multicast_pvs,
     mvd_multicast_phs,
+    mvd_multicast_pvs,
     mvd_multicast_all_r,
-    mvd_multicast_pvs_r,
     mvd_multicast_phs_r,
+    mvd_multicast_pvs_r,
     mvd_sound,
     mvd_print,
     mvd_stufftext,      // reserved
