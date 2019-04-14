@@ -27,7 +27,7 @@ static player_t *_build_player(const player_state_t *f, const player_state_t *t)
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++) {
         if (t->stats[i] != f->stats[i]) {
-            statbits |= 1 << i;
+            statbits |= 1U << i;
         }
     }
     if (statbits) {
@@ -253,7 +253,7 @@ static void update_player(player_state_t *s, const player_t *d)
 
     if (d->bits & P_STATS) {
         for (i = 0; i < MAX_STATS; i++) {
-            if (d->statbits & (1 << i)) {
+            if (d->statbits & (1U << i)) {
                 s->stats[i] = d->s.stats[i];
             }
         }

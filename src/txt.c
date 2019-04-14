@@ -68,8 +68,11 @@ static void parse_escape(void)
                 c = c1;
                 line.ptr++;
             }
+            break;
         }
-        break;
+        // fall through
+    default:
+        fatal("line %d: bad escape sequence", line.number);
     }
     addchar(c);
     line.ptr += 2;
@@ -247,7 +250,7 @@ static unsigned parse_stats(int *stats)
     while (1) {
         tok = parse();
         if (!strcmp(tok, "stat")) {
-            bits |= 1 << parse_stat(stats);
+            bits |= 1U << parse_stat(stats);
         } else if (!strcmp(tok, "}")) {
             break;
         } else {
@@ -1094,7 +1097,7 @@ static void write_string(const char *name, const char *s)
 
     p = buffer;
     while (*s) {
-        c = *s++;
+        c = (uint8_t)*s++;
 
         switch (c) {
         case '\"':
@@ -1123,7 +1126,7 @@ static void write_string(const char *name, const char *s)
             } else {
                 *p++ = '\\';
                 *p++ = 'x';
-                *p++ = hex[(c >> 4) & 15];
+                *p++ = hex[c >> 4];
                 *p++ = hex[c & 15];
             }
             break;
@@ -1155,7 +1158,7 @@ static void write_stats(player_t *p)
 
     begin_block("stats");
     for (i = 0; i < MAX_STATS; i++) {
-        if (p->statbits & (1 << i)) {
+        if (p->statbits & (1U << i)) {
             begin_block("stat");
             write_int("index", i);
             write_int("value", p->s.stats[i]);

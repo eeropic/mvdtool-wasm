@@ -6,7 +6,7 @@
 
 static struct {
     uint8_t data[MAX_MSGLEN];
-    uint8_t *head, *tail;
+    size_t head, tail;
 } msg;
 
 unsigned mask_hack;
@@ -19,11 +19,11 @@ static void *read_data(size_t len)
 {
     void *p;
 
-    if (msg.head + len > msg.tail) {
+    if (len > msg.tail - msg.head) {
         fatal("read past end of message");
     }
 
-    p = msg.head;
+    p = msg.data + msg.head;
     msg.head += len;
     return p;
 }
@@ -49,7 +49,7 @@ static unsigned read_uint16(void)
 static unsigned read_uint32(void)
 {
     uint8_t *p = read_data(4);
-    return (uint32_t)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24));
+    return p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
 static int *read_int8_v(int *v, size_t n)
@@ -237,7 +237,7 @@ static node_t *parse_player(void)
     if (bits & P_STATS) {
         p->statbits = read_uint32();
         for (i = 0; i < MAX_STATS; i++) {
-            if (p->statbits & (1 << i)) {
+            if (p->statbits & (1U << i)) {
                 p->s.stats[i] = read_int16();
             }
         }
@@ -524,7 +524,7 @@ static node_t *parse_temp_entity(void)
     return NODE(t);
 }
 
-static node_t *parse_svc(uint8_t *tail)
+static node_t *parse_svc(size_t tail)
 {
     unsigned cmd;
     node_t *ret, *n, **next_p;
@@ -700,8 +700,8 @@ uint8_t *load_bin(FILE *fp, size_t *size_p)
         fatal("msglen > MAX_MSGLEN");
     }
     read_raw(msg.data, msglen, fp);
-    msg.head = msg.data;
-    msg.tail = msg.data + msglen;
+    msg.head = 0;
+    msg.tail = msglen;
 
     if (size_p) {
         *size_p = msglen;
@@ -731,14 +731,14 @@ static void *get_space(size_t len)
 {
     void *p;
 
-    if (msg.head + len > msg.tail) {
+    if (len > msg.tail - msg.head) {
         fatal("message overflowed");
     }
 
-    p = msg.head;
+    p = msg.data + msg.head;
     msg.head += len;
 #ifdef _DEBUG
-    if (msg.head - msg.data >= trap_pos) fatal("trap");
+    if (msg.head >= trap_pos) fatal("trap");
 #endif
     return p;
 }
@@ -836,7 +836,7 @@ static void write_player(player_t *p)
     if (p->bits & P_STATS) {
         write_uint32(p->statbits);
         for (i = 0; i < MAX_STATS; i++) {
-            if (p->statbits & (1 << i)) {
+            if (p->statbits & (1U << i)) {
                 write_int16(p->s.stats[i]);
             }
         }
@@ -1219,13 +1219,12 @@ static void write_svc(void *n)
 
 static void write_svc_hdr(uint8_t *hdr, unsigned cmd, node_t *data)
 {
-    uint8_t *ptr;
-    size_t len;
+    size_t len, pos;
     unsigned bits;
 
-    ptr = msg.head;
+    pos = msg.head;
     iter_list(data, write_svc);
-    len = msg.head - ptr;
+    len = msg.head - pos;
 
     bits = (len >> 8) & 7;
     hdr[0] = cmd | (bits << SVCMD_BITS);
@@ -1299,11 +1298,11 @@ size_t write_bin(FILE *fp, node_t *nodes)
 {
     uint16_t msglen;
 
-    msg.tail = msg.data + MAX_MSGLEN;
-    msg.head = msg.data;
+    msg.head = 0;
+    msg.tail = MAX_MSGLEN;
     iter_list(nodes, write_node);
 
-    msglen = le16(msg.head - msg.data);
+    msglen = le16(msg.head);
     write_raw(&msglen, sizeof(msglen), fp);
 
     write_raw(msg.data, msglen, fp);
