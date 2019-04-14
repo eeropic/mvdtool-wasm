@@ -137,7 +137,7 @@ typedef struct {
     unsigned majorversion;
     unsigned minorversion;
     unsigned servercount;
-    unsigned clientnum;
+    int clientnum;
     char gamedir[MAX_QPATH];
     node_t *configstrings;
     node_t *baseframe;

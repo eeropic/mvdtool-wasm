@@ -319,7 +319,7 @@ static node_t *parse_serverdata(unsigned bits)
 
     g->servercount = read_uint32();
     read_string(g->gamedir, sizeof(g->gamedir));
-    g->clientnum = read_uint16();
+    g->clientnum = read_int16();
     g->mvdflags = bits;
     g->configstrings = build_list(_parse_configstring);
     g->baseframe = parse_frame();
@@ -1022,7 +1022,7 @@ static void write_gamestate(game_state_t *g)
     write_uint16(g->minorversion);
     write_uint32(g->servercount);
     write_string(g->gamedir);
-    write_uint16(g->clientnum);
+    write_int16(g->clientnum);
     iter_list(g->configstrings, _write_configstring);
     write_uint16(MAX_CONFIGSTRINGS);
     _write_frame((frame_t *)g->baseframe);

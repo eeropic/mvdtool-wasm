@@ -953,7 +953,7 @@ static node_t *parse_serverdata(void)
         } else if (!strcmp(tok, "gamedir")) {
             parse_string(g->gamedir, MAX_QPATH);
         } else if (!strcmp(tok, "clientnum")) {
-            g->clientnum = parse_uint(0, CLIENTNUM_NONE - 1);
+            g->clientnum = parse_int(-1, CLIENTNUM_NONE - 1);
         } else if (!strcmp(tok, "basestrings")) {
             g->configstrings = parse_basestrings();
         } else if (!strcmp(tok, "baseframe")) {

@@ -13,7 +13,7 @@ typedef struct {
 typedef struct {
     unsigned mvdflags;
     unsigned servercount;
-    unsigned clientnum;
+    int clientnum;
     char gamedir[MAX_QPATH];
     char configstrings[MAX_CONFIGSTRINGS][MAX_QPATH + 1];
     world_entity_t entities[MAX_EDICTS];
