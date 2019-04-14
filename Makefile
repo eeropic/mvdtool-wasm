@@ -1,13 +1,25 @@
-.PHONY: all default win32-exe clean
+CFLAGS := -MMD -g -O2 -Wall -Wextra
+LDFLAGS := -g
+STRIP := strip
 
-all: default
+TARGET := mvdtool
 
-default:
-	$(MAKE) -C src default
+SRCFILES := $(wildcard *.c)
+OBJFILES := $(SRCFILES:%.c=%.o)
 
-win32-exe:
-	$(MAKE) -C src CC=i586-mingw32msvc-gcc STRIP=i586-mingw32msvc-strip TARGET=mvdtool.exe strip
+all: $(TARGET)
+
+default: $(TARGET)
+
+.PHONY: all default clean
+
+-include *.d
+
+$(TARGET): $(OBJFILES)
+	$(CC) -o $@ $(LDFLAGS) $^
+
+strip: $(TARGET)
+	$(STRIP) $^
 
 clean:
-	$(MAKE) -C src clean
-	$(MAKE) -C src TARGET=mvdtool.exe clean
+	rm -f $(TARGET) *.o *.d
