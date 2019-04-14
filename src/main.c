@@ -18,7 +18,7 @@ void read_raw(void *buf, size_t len, FILE *fp)
 {
     if (fread(buf, 1, len, fp) != len) {
         if (ferror(fp)) {
-            fatal("failed to read file: %s", strerror(errno));
+            fatal("failed to read file");
         } else {
             fatal("unexpected end of file");
         }
@@ -30,7 +30,7 @@ void read_raw_safe(void *buf, size_t len, FILE *fp)
 {
     if (fread(buf, 1, len, fp) != len) {
         if (ferror(fp)) {
-            fprintf(stderr, "WARNING: error reading file: %s\n", strerror(errno));
+            fprintf(stderr, "WARNING: error reading file\n");
         }
         return false;
     }
@@ -41,7 +41,7 @@ void read_raw_safe(void *buf, size_t len, FILE *fp)
 void write_raw(void *buf, size_t len, FILE *fp)
 {
     if (fwrite(buf, 1, len, fp) != len) {
-        fatal("failed to write file: %s", strerror(errno));
+        fatal("failed to write file");
     }
 }
 

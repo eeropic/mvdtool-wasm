@@ -23,7 +23,7 @@ static void read_line(void)
     line.number++;
     if (!fgets(line.data, sizeof(line.data), ifp)) {
         if (ferror(ifp)) {
-            fatal("reading input file: %s", strerror(errno));
+            fatal("reading input file");
         }
         fatal("unexpected end of file");
     }
