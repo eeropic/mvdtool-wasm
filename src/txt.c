@@ -170,20 +170,20 @@ static size_t parse_string(char *buf, size_t size)
 
 static int parse_int(int b_min, int b_max)
 {
-    int v = atoi(parse());
+    long v = strtol(parse(), NULL, 0);
 
     if (v < b_min || v > b_max) {
-        fatal("line %d: value out of range: %d", line.number, v);
+        fatal("line %d: value out of range: %ld", line.number, v);
     }
     return v;
 }
 
 static unsigned parse_uint(unsigned b_min, unsigned b_max)
 {
-    unsigned v = strtoul(parse(), NULL, 0);
+    unsigned long v = strtoul(parse(), NULL, 0);
 
     if (v < b_min || v > b_max) {
-        fatal("line %d: value out of range: %u", line.number, v);
+        fatal("line %d: value out of range: %lu", line.number, v);
     }
     return v;
 }
