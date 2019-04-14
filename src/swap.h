@@ -1,23 +1,26 @@
-static inline uint16_t swap16( uint16_t x ) {
-    x = ( x >> 8 ) | ( x << 8 );
+static inline uint16_t swap16(uint16_t x)
+{
+    x = (x >> 8) | (x << 8);
     return x;
 }
 
-static inline uint32_t swap32( uint32_t x ) {
-    x = ( ( x >> 8 ) & 0x00ff00ff ) | ( ( x << 8 ) & 0xff00ff00 );
-    x = ( x >> 16 ) | ( x << 16 );
+static inline uint32_t swap32(uint32_t x)
+{
+    x = ((x >> 8) & 0x00ff00ff) | ((x << 8) & 0xff00ff00);
+    x = (x >> 16) | (x << 16);
     return x;
 }
 
-static inline uint64_t swap64( uint64_t x ) {
+static inline uint64_t swap64(uint64_t x)
+{
     union {
         uint64_t ll;
         uint32_t l[2];
     } a, b;
 
     a.ll = x;
-    b.l[0] = swap32( a.l[1] );
-    b.l[1] = swap32( a.l[0] );
+    b.l[0] = swap32(a.l[1]);
+    b.l[1] = swap32(a.l[0]);
 
     return b.ll;
 }

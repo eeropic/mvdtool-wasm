@@ -20,7 +20,8 @@
 #define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
-static void sha1_transform(uint32_t state[5], const uint8_t buffer[64]) {
+static void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
+{
     uint32_t a, b, c, d, e;
     uint32_t block[16];
 
@@ -60,7 +61,8 @@ static void sha1_transform(uint32_t state[5], const uint8_t buffer[64]) {
 }
 
 /* Initialize new ctx */
-void sha1_init(SHA1_CTX *ctx) {
+void sha1_init(SHA1_CTX *ctx)
+{
     /* SHA1 initialization constants */
     ctx->state[0] = 0x67452301;
     ctx->state[1] = 0xEFCDAB89;
@@ -71,15 +73,16 @@ void sha1_init(SHA1_CTX *ctx) {
 }
 
 /* Run your data through this. */
-void sha1_update(SHA1_CTX *ctx, uint8_t *data, size_t len) {
+void sha1_update(SHA1_CTX *ctx, uint8_t *data, size_t len)
+{
     size_t i, j;
 
     j = ctx->count & 63;
     ctx->count += len;
     if ((j + len) > 63) {
-        memcpy(&ctx->buffer[j], data, (i = 64-j));
+        memcpy(&ctx->buffer[j], data, (i = 64 - j));
         sha1_transform(ctx->state, ctx->buffer);
-        for ( ; i + 63 < len; i += 64) {
+        for (; i + 63 < len; i += 64) {
             sha1_transform(ctx->state, &data[i]);
         }
         j = 0;
@@ -90,7 +93,8 @@ void sha1_update(SHA1_CTX *ctx, uint8_t *data, size_t len) {
 }
 
 /* Add padding and return the message digest. */
-void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]) {
+void sha1_final(SHA1_CTX *ctx, uint8_t digest[20])
+{
     uint64_t finalcount = be64(ctx->count << 3);
     int i;
 

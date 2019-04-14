@@ -6,7 +6,8 @@
 #include "sha1.h"
 #include "option.h"
 
-int hash_main( void ) {
+int hash_main(void)
+{
     uint32_t magic;
     size_t msglen;
     uint8_t *data;
@@ -16,41 +17,41 @@ int hash_main( void ) {
 
     FILE *ifp = stdin;
     FILE *ofp = stdout;
-    
-    if( cmd_argc > 1 ) {
-        ifp = fopen( cmd_argv[1], "rb" );
-        if( !ifp ) {
-            perror( "fopen" );
+
+    if (cmd_argc > 1) {
+        ifp = fopen(cmd_argv[1], "rb");
+        if (!ifp) {
+            perror("fopen");
             return 1;
         }
-        if( cmd_argc > 2 ) {
-            ofp = fopen( cmd_argv[2], "w" );
-            if( !ofp ) {
-                perror( "fopen" );
+        if (cmd_argc > 2) {
+            ofp = fopen(cmd_argv[2], "w");
+            if (!ofp) {
+                perror("fopen");
                 return 1;
             }
         }
     }
 
-    read_raw( &magic, sizeof( magic ), ifp );
-    if( magic != le32( MVD_MAGIC ) ) {
-        fatal( "not a MVD2 file" );
+    read_raw(&magic, sizeof(magic), ifp);
+    if (magic != le32(MVD_MAGIC)) {
+        fatal("not a MVD2 file");
     }
 
-    while( !feof( ifp ) ) {
-        data = load_bin( ifp, &msglen );
-        if( !data ) {
+    while (!feof(ifp)) {
+        data = load_bin(ifp, &msglen);
+        if (!data) {
             break;
         }
 
-        sha1_init( &ctx );
-        sha1_update( &ctx, data, msglen );
-        sha1_final( &ctx, digest );
+        sha1_init(&ctx);
+        sha1_update(&ctx, data, msglen);
+        sha1_final(&ctx, digest);
 
-        for( i = 0; i < 20; i++ ) {
-            fprintf( ofp, "%02x", digest[i] );
+        for (i = 0; i < 20; i++) {
+            fprintf(ofp, "%02x", digest[i]);
         }
-        fprintf( ofp, "\n" );
+        fprintf(ofp, "\n");
     }
 
     return 0;

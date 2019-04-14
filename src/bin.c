@@ -15,11 +15,12 @@ unsigned mask_hack;
 // reading
 //
 
-static void *read_data( size_t len ) {
+static void *read_data(size_t len)
+{
     void *p;
 
-    if( msg.head + len > msg.tail ) {
-        fatal( "read past end of message" );
+    if (msg.head + len > msg.tail) {
+        fatal("read past end of message");
     }
 
     p = msg.head;
@@ -27,183 +28,216 @@ static void *read_data( size_t len ) {
     return p;
 }
 
-static unsigned read_uint8( void ) {
-    uint8_t *p = read_data( 1 );
+static unsigned read_uint8(void)
+{
+    uint8_t *p = read_data(1);
     return *p;
 }
 
-static int read_int16( void ) {
-    uint8_t *p = read_data( 2 );
-    return ( int16_t )( p[0] | ( p[1] << 8 ) );
+static int read_int16(void)
+{
+    uint8_t *p = read_data(2);
+    return (int16_t)(p[0] | (p[1] << 8));
 }
 
-static unsigned read_uint16( void ) {
-    uint8_t *p = read_data( 2 );
-    return ( uint16_t )( p[0] | ( p[1] << 8 ) );
+static unsigned read_uint16(void)
+{
+    uint8_t *p = read_data(2);
+    return (uint16_t)(p[0] | (p[1] << 8));
 }
 
-static unsigned read_uint32( void ) {
-    uint8_t *p = read_data( 4 );
-    return ( uint32_t )( p[0] | ( p[1] << 8 ) | ( p[2] << 16 ) | ( p[3] << 24 ) );
+static unsigned read_uint32(void)
+{
+    uint8_t *p = read_data(4);
+    return (uint32_t)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24));
 }
 
-static int *read_int8_v( int *v, size_t n ) {
-    uint8_t *p = read_data( n );
+static int *read_int8_v(int *v, size_t n)
+{
+    uint8_t *p = read_data(n);
     size_t i;
 
-    for( i = 0; i < n; i++ ) {
-        v[i] = ( int8_t )p[i];
+    for (i = 0; i < n; i++) {
+        v[i] = (int8_t)p[i];
     }
 
     return v;
 }
 
-static unsigned *read_uint8_v( unsigned *v, size_t n ) {
-    uint8_t *p = read_data( n );
+static unsigned *read_uint8_v(unsigned *v, size_t n)
+{
+    uint8_t *p = read_data(n);
     size_t i;
 
-    for( i = 0; i < n; i++ ) {
+    for (i = 0; i < n; i++) {
         v[i] = p[i];
     }
 
     return v;
 }
 
-static int *read_int16_v( int *v, size_t n ) {
+static int *read_int16_v(int *v, size_t n)
+{
     size_t i;
 
-    for( i = 0; i < n; i++ ) {
+    for (i = 0; i < n; i++) {
         v[i] = read_int16();
     }
 
     return v;
 }
 
-static size_t read_string( char *dest, size_t size ) {
+static size_t read_string(char *dest, size_t size)
+{
     size_t len = 0;
     int c;
 
-    while( 1 ) {
+    while (1) {
         c = read_uint8();
-        if( !c ) {
+        if (!c) {
             break;
         }
-        if( len + 1 < size ) {
+        if (len + 1 < size) {
             *dest++ = c;
         }
         len++;
     }
 
-    if( size ) {
+    if (size) {
         *dest = 0;
     }
     return len;
 }
 
-static node_t *parse_entity( void ) {
+static node_t *parse_entity(void)
+{
     entity_t *e;
     unsigned bits;
     unsigned number;
 
     bits = read_uint8();
-    if( bits & E_MOREBITS1 ) bits |= read_uint8() << 8;
-    if( bits & E_MOREBITS2 ) bits |= read_uint8() << 16;
-    if( bits & E_MOREBITS3 ) bits |= read_uint8() << 24;
+    if (bits & E_MOREBITS1) bits |= read_uint8() << 8;
+    if (bits & E_MOREBITS2) bits |= read_uint8() << 16;
+    if (bits & E_MOREBITS3) bits |= read_uint8() << 24;
 
-    if( bits & E_NUMBER16 ) {
+    if (bits & E_NUMBER16) {
         number = read_uint16();
     } else {
         number = read_uint8();
     }
 
-    if( !number ) {
+    if (!number) {
         return NULL;
     }
 
-    if( number >= MAX_EDICTS ) {
-        fatal( "bad entity number" );
+    if (number >= MAX_EDICTS) {
+        fatal("bad entity number");
     }
 
-    e = alloc_node( NODE_ENTITY, sizeof( *e ) );
+    e = alloc_node(NODE_ENTITY, sizeof(*e));
     e->number = number;
     e->bits = bits;
 
-    if( bits & E_MODEL ) e->s.modelindex = read_uint8();
-    if( bits & E_MODEL2 ) e->s.modelindex2 = read_uint8();
-    if( bits & E_MODEL3 ) e->s.modelindex3 = read_uint8();
-    if( bits & E_MODEL4 ) e->s.modelindex4 = read_uint8();
-    switch( bits & E_FRAME32 ) {
-        case E_FRAME32: fatal( "E_FRAME32 is not supported" );
-        case E_FRAME16: e->s.frame = read_uint16(); break;
-        case E_FRAME8: e->s.frame = read_uint8(); break;
+    if (bits & E_MODEL) e->s.modelindex = read_uint8();
+    if (bits & E_MODEL2) e->s.modelindex2 = read_uint8();
+    if (bits & E_MODEL3) e->s.modelindex3 = read_uint8();
+    if (bits & E_MODEL4) e->s.modelindex4 = read_uint8();
+    switch (bits & E_FRAME32) {
+    case E_FRAME32:
+        fatal("E_FRAME32 is not supported");
+    case E_FRAME16:
+        e->s.frame = read_uint16();
+        break;
+    case E_FRAME8:
+        e->s.frame = read_uint8();
+        break;
     }
-    switch( bits & E_SKIN32 ) {
-        case E_SKIN32: e->s.skin = read_uint32(); break;
-        case E_SKIN16: e->s.skin = read_uint16(); break;
-        case E_SKIN8: e->s.skin = read_uint8(); break;
+    switch (bits & E_SKIN32) {
+    case E_SKIN32:
+        e->s.skin = read_uint32();
+        break;
+    case E_SKIN16:
+        e->s.skin = read_uint16();
+        break;
+    case E_SKIN8:
+        e->s.skin = read_uint8();
+        break;
     }
-    switch( bits & E_EFFECTS32 ) {
-        case E_EFFECTS32: e->s.effects = read_uint32(); break;
-        case E_EFFECTS16: e->s.effects = read_uint16(); break;
-        case E_EFFECTS8: e->s.effects = read_uint8(); break;
+    switch (bits & E_EFFECTS32) {
+    case E_EFFECTS32:
+        e->s.effects = read_uint32();
+        break;
+    case E_EFFECTS16:
+        e->s.effects = read_uint16();
+        break;
+    case E_EFFECTS8:
+        e->s.effects = read_uint8();
+        break;
     }
-    switch( bits & E_RENDERFX32 ) {
-        case E_RENDERFX32: e->s.renderfx = read_uint32(); break;
-        case E_RENDERFX16: e->s.renderfx = read_uint16(); break;
-        case E_RENDERFX8: e->s.renderfx = read_uint8(); break;
+    switch (bits & E_RENDERFX32) {
+    case E_RENDERFX32:
+        e->s.renderfx = read_uint32();
+        break;
+    case E_RENDERFX16:
+        e->s.renderfx = read_uint16();
+        break;
+    case E_RENDERFX8:
+        e->s.renderfx = read_uint8();
+        break;
     }
-    if( bits & E_ORIGIN1 ) e->s.origin_x = read_int16();
-    if( bits & E_ORIGIN2 ) e->s.origin_y = read_int16();
-    if( bits & E_ORIGIN3 ) e->s.origin_z = read_int16();
-    if( bits & E_ANGLE1 ) e->s.angle_x = read_uint8();
-    if( bits & E_ANGLE2 ) e->s.angle_y = read_uint8();
-    if( bits & E_ANGLE3 ) e->s.angle_z = read_uint8();
-    if( bits & E_OLDORIGIN ) read_int16_v( e->s.old_origin, 3 );
-    if( bits & E_SOUND ) e->s.sound = read_uint8();
-    if( bits & E_EVENT ) e->s.event = read_uint8();
-    if( bits & E_SOLID ) e->s.solid = read_int16();
+    if (bits & E_ORIGIN1) e->s.origin_x = read_int16();
+    if (bits & E_ORIGIN2) e->s.origin_y = read_int16();
+    if (bits & E_ORIGIN3) e->s.origin_z = read_int16();
+    if (bits & E_ANGLE1) e->s.angle_x = read_uint8();
+    if (bits & E_ANGLE2) e->s.angle_y = read_uint8();
+    if (bits & E_ANGLE3) e->s.angle_z = read_uint8();
+    if (bits & E_OLDORIGIN) read_int16_v(e->s.old_origin, 3);
+    if (bits & E_SOUND) e->s.sound = read_uint8();
+    if (bits & E_EVENT) e->s.event = read_uint8();
+    if (bits & E_SOLID) e->s.solid = read_int16();
 
     return NODE(e);
 }
 
-static node_t *parse_player( void ) {
+static node_t *parse_player(void)
+{
     player_t *p;
     unsigned bits;
     unsigned number;
     int i;
 
     number = read_uint8();
-    if( number == CLIENTNUM_NONE ) {
+    if (number == CLIENTNUM_NONE) {
         return NULL;
     }
-    if( number >= MAX_CLIENTS ) {
-        fatal( "bad client number" );
+    if (number >= MAX_CLIENTS) {
+        fatal("bad client number");
     }
 
     bits = read_int16();
 
-    p = alloc_node( NODE_PLAYER, sizeof( *p ) );
+    p = alloc_node(NODE_PLAYER, sizeof(*p));
     p->number = number;
     p->bits = bits;
 
-    if( bits & P_TYPE ) p->s.pm_type = read_uint8();
-    if( bits & P_ORIGIN ) read_int16_v( p->s.origin_xy, 2 );
-    if( bits & P_ORIGIN2 ) p->s.origin_z = read_int16();
-    if( bits & P_VIEWOFFSET ) read_int8_v( p->s.viewoffset, 3 );
-    if( bits & P_VIEWANGLES ) read_int16_v( p->s.viewangles_xy, 2 );
-    if( bits & P_VIEWANGLE2 ) p->s.viewangle_z = read_int16();
-    if( bits & P_KICKANGLES ) read_int8_v( p->s.kickangles, 3 );
-    if( bits & P_WEAPONINDEX ) p->s.weaponindex = read_uint8();
-    if( bits & P_WEAPONFRAME ) p->s.weaponframe = read_uint8();
-    if( bits & P_GUNOFFSET ) read_int8_v( p->s.gunoffset, 3 );
-    if( bits & P_GUNANGLES ) read_int8_v( p->s.gunangles, 3 );
-    if( bits & P_BLEND ) read_uint8_v( p->s.blend, 4 );
-    if( bits & P_FOV ) p->s.fov = read_uint8();
-    if( bits & P_RDFLAGS ) p->s.rdflags = read_uint8();
-    if( bits & P_STATS ) {
+    if (bits & P_TYPE) p->s.pm_type = read_uint8();
+    if (bits & P_ORIGIN) read_int16_v(p->s.origin_xy, 2);
+    if (bits & P_ORIGIN2) p->s.origin_z = read_int16();
+    if (bits & P_VIEWOFFSET) read_int8_v(p->s.viewoffset, 3);
+    if (bits & P_VIEWANGLES) read_int16_v(p->s.viewangles_xy, 2);
+    if (bits & P_VIEWANGLE2) p->s.viewangle_z = read_int16();
+    if (bits & P_KICKANGLES) read_int8_v(p->s.kickangles, 3);
+    if (bits & P_WEAPONINDEX) p->s.weaponindex = read_uint8();
+    if (bits & P_WEAPONFRAME) p->s.weaponframe = read_uint8();
+    if (bits & P_GUNOFFSET) read_int8_v(p->s.gunoffset, 3);
+    if (bits & P_GUNANGLES) read_int8_v(p->s.gunangles, 3);
+    if (bits & P_BLEND) read_uint8_v(p->s.blend, 4);
+    if (bits & P_FOV) p->s.fov = read_uint8();
+    if (bits & P_RDFLAGS) p->s.rdflags = read_uint8();
+    if (bits & P_STATS) {
         p->statbits = read_uint32();
-        for( i = 0; i < MAX_STATS; i++ ) {
-            if( p->statbits & ( 1 << i ) ) {
+        for (i = 0; i < MAX_STATS; i++) {
+            if (p->statbits & (1 << i)) {
                 p->s.stats[i] = read_int16();
             }
         }
@@ -212,95 +246,100 @@ static node_t *parse_player( void ) {
     return NODE(p);
 }
 
-static node_t *parse_blob( void ) {
+static node_t *parse_blob(void)
+{
     blob_t *b;
     size_t len;
 
     len = read_uint8();
-    if( !len ) {
+    if (!len) {
         return NULL;
     }
 
-    b = alloc_node( NODE_BLOB, sizeof( *b ) + len - 1 );
+    b = alloc_node(NODE_BLOB, sizeof(*b) + len - 1);
     b->len = len;
-    memcpy( b->data, read_data( len ), len );
+    memcpy(b->data, read_data(len), len);
 
     return NODE(b);
 }
 
-static node_t *parse_frame( void ) {
-    frame_t *f = alloc_node( NODE_FRAME, sizeof( *f ) );
+static node_t *parse_frame(void)
+{
+    frame_t *f = alloc_node(NODE_FRAME, sizeof(*f));
 
     f->portalbits = parse_blob();
-    f->players = build_list( parse_player );
-    f->entities = build_list( parse_entity );
+    f->players = build_list(parse_player);
+    f->entities = build_list(parse_entity);
 
     return NODE(f);
 }
 
-static node_t *_parse_configstring( void ) {
-    char buffer[CS_SIZE(CS_STATUSBAR)+1];
+static node_t *_parse_configstring(void)
+{
+    char buffer[CS_SIZE(CS_STATUSBAR) + 1];
     unsigned index;
     string_t *s;
     size_t len;
 
     index = read_uint16();
-    if( index == MAX_CONFIGSTRINGS ) {
+    if (index == MAX_CONFIGSTRINGS) {
         return NULL;
     }
-    if( index > MAX_CONFIGSTRINGS ) {
-        fatal( "bad configstring index" );
+    if (index > MAX_CONFIGSTRINGS) {
+        fatal("bad configstring index");
     }
 
-    len = read_string( buffer, sizeof( buffer ) );
-    if( len >= CS_SIZE(index) ) {
-        fatal( "oversize confistring" );
+    len = read_string(buffer, sizeof(buffer));
+    if (len >= CS_SIZE(index)) {
+        fatal("oversize confistring");
     }
 
-    s = alloc_node( NODE_CONFIGSTRING, sizeof( *s ) + len );
+    s = alloc_node(NODE_CONFIGSTRING, sizeof(*s) + len);
     s->index = index;
-    memcpy( s->data, buffer, len + 1 );
+    memcpy(s->data, buffer, len + 1);
     s->len = len;
 
     return NODE(s);
 }
 
-static node_t *parse_serverdata( unsigned bits ) {
+static node_t *parse_serverdata(unsigned bits)
+{
     game_state_t *g;
 
-    g = alloc_node( NODE_GAMESTATE, sizeof( *g ) );
+    g = alloc_node(NODE_GAMESTATE, sizeof(*g));
     g->majorversion = read_uint32();
-    if( g->majorversion != PROTOCOL_VERSION_MVD ) {
-        fatal( "unknown major protocol version" );
+    if (g->majorversion != PROTOCOL_VERSION_MVD) {
+        fatal("unknown major protocol version");
     }
 
     g->minorversion = read_uint16();
-    if( !MVD_SUPPORTED( g->minorversion ) ) {
-        fatal( "unsupported minor protocol version" );
+    if (!MVD_SUPPORTED(g->minorversion)) {
+        fatal("unsupported minor protocol version");
     }
 
     g->servercount = read_uint32();
-    read_string( g->gamedir, sizeof( g->gamedir ) );
+    read_string(g->gamedir, sizeof(g->gamedir));
     g->clientnum = read_uint16();
     g->mvdflags = bits;
-    g->configstrings = build_list( _parse_configstring );
+    g->configstrings = build_list(_parse_configstring);
     g->baseframe = parse_frame();
 
     return NODE(g);
 }
 
-static string_t *_parse_string( unsigned type ) {
+static string_t *_parse_string(unsigned type)
+{
     string_t *s;
     char buffer[MAX_PACKETLEN]; // FIXME: should be MAX_STRING_CHARS
     size_t len;
 
-    len = read_string( buffer, sizeof( buffer ) );
-    if( len >= sizeof( buffer ) ) {
-        fatal( "oversize string" );
+    len = read_string(buffer, sizeof(buffer));
+    if (len >= sizeof(buffer)) {
+        fatal("oversize string");
     }
 
-    s = alloc_node( type, sizeof( *s ) + len );
-    memcpy( s->data, buffer, len + 1 );
+    s = alloc_node(type, sizeof(*s) + len);
+    memcpy(s->data, buffer, len + 1);
     s->len = len;
 
     return s;
@@ -308,19 +347,21 @@ static string_t *_parse_string( unsigned type ) {
 
 #define parse_string(x) NODE(_parse_string(x))
 
-static node_t *parse_print( void ) {
+static node_t *parse_print(void)
+{
     string_t *s;
     unsigned level;
 
     level = read_uint8();
-    s = _parse_string( NODE_PRINT );
+    s = _parse_string(NODE_PRINT);
     s->index = level;
 
     return NODE(s);
 }
 
-static node_t *parse_muzzleflash( unsigned cmd ) {
-    muzzleflash_t *m = alloc_node( NODE_MUZZLEFLASH, sizeof( *m ) );
+static node_t *parse_muzzleflash(unsigned cmd)
+{
+    muzzleflash_t *m = alloc_node(NODE_MUZZLEFLASH, sizeof(*m));
 
     m->type = cmd - svc_muzzleflash;
     m->entity = read_uint16();
@@ -329,38 +370,41 @@ static node_t *parse_muzzleflash( unsigned cmd ) {
     return NODE(m);
 }
 
-static node_t *parse_svc_sound( void ) {
-    sound_t *s = alloc_node( NODE_SOUND, sizeof( *s ) );
+static node_t *parse_svc_sound(void)
+{
+    sound_t *s = alloc_node(NODE_SOUND, sizeof(*s));
 
     s->bits = read_uint8();
     s->index = read_uint8();
-    if( s->bits & SND_VOLUME ) s->volume = read_uint8();
-    if( s->bits & SND_ATTENUATION ) s->attenuation = read_uint8();
-    if( s->bits & SND_OFFSET ) s->offset = read_uint8();
-    if( s->bits & SND_ENT ) {
+    if (s->bits & SND_VOLUME) s->volume = read_uint8();
+    if (s->bits & SND_ATTENUATION) s->attenuation = read_uint8();
+    if (s->bits & SND_OFFSET) s->offset = read_uint8();
+    if (s->bits & SND_ENT) {
         unsigned channel = read_uint16();
         s->entity = channel >> 3;
         s->channel = channel & 7;
     }
-    if( s->bits & SND_POS ) read_int16_v( s->pos, 3 );
+    if (s->bits & SND_POS) read_int16_v(s->pos, 3);
 
     return NODE(s);
 }
 
-static node_t *parse_configstring( void ) {
+static node_t *parse_configstring(void)
+{
     node_t *s = _parse_configstring();
 
-    if( !s ) {
-        fatal( "bad configstring index" );
+    if (!s) {
+        fatal("bad configstring index");
     }
     return s;
 }
 
-static node_t *parse_temp_entity( void ) {
-    tent_t *t = alloc_node( NODE_TEMP_ENTITY, sizeof( *t ) );
+static node_t *parse_temp_entity(void)
+{
+    tent_t *t = alloc_node(NODE_TEMP_ENTITY, sizeof(*t));
 
     t->type = read_uint8();
-    switch( t->type ) {
+    switch (t->type) {
     case TE_BLOOD:
     case TE_GUNSHOT:
     case TE_SPARKS:
@@ -376,7 +420,7 @@ static node_t *parse_temp_entity( void ) {
     case TE_HEATBEAM_STEAM:
     case TE_MOREBLOOD:
     case TE_ELECTRIC_SPARKS:
-        read_int16_v( t->pos1, 3 );
+        read_int16_v(t->pos1, 3);
         t->dir = read_uint8();
         break;
 
@@ -385,7 +429,7 @@ static node_t *parse_temp_entity( void ) {
     case TE_WELDING_SPARKS:
     case TE_TUNNEL_SPARKS:
         t->count = read_uint8();
-        read_int16_v( t->pos1, 3 );
+        read_int16_v(t->pos1, 3);
         t->dir = read_uint8();
         t->color = read_uint8();
         break;
@@ -396,8 +440,8 @@ static node_t *parse_temp_entity( void ) {
     case TE_DEBUGTRAIL:
     case TE_BUBBLETRAIL2:
     case TE_BFG_LASER:
-        read_int16_v( t->pos1, 3 );
-        read_int16_v( t->pos2, 3 );
+        read_int16_v(t->pos1, 3);
+        read_int16_v(t->pos2, 3);
         break;
 
     case TE_GRENADE_EXPLOSION:
@@ -419,7 +463,7 @@ static node_t *parse_temp_entity( void ) {
     case TE_DBALL_GOAL:
     case TE_WIDOWSPLASH:
     case TE_NUKEBLAST:
-        read_int16_v( t->pos1, 3 );
+        read_int16_v(t->pos1, 3);
         break;
 
     case TE_PARASITE_ATTACK:
@@ -427,87 +471,88 @@ static node_t *parse_temp_entity( void ) {
     case TE_HEATBEAM:
     case TE_MONSTER_HEATBEAM:
         t->entity1 = read_uint16();
-        read_int16_v( t->pos1, 3 );
-        read_int16_v( t->pos2, 3 );
+        read_int16_v(t->pos1, 3);
+        read_int16_v(t->pos2, 3);
         break;
 
     case TE_GRAPPLE_CABLE:
         t->entity1 = read_uint16();
-        read_int16_v( t->pos1, 3 );
-        read_int16_v( t->pos2, 3 );
-        read_int16_v( t->offset, 3 );
+        read_int16_v(t->pos1, 3);
+        read_int16_v(t->pos2, 3);
+        read_int16_v(t->offset, 3);
         break;
 
     case TE_LIGHTNING:
         t->entity1 = read_uint16();
         t->entity2 = read_uint16();
-        read_int16_v( t->pos1, 3 );
-        read_int16_v( t->pos2, 3 );
+        read_int16_v(t->pos1, 3);
+        read_int16_v(t->pos2, 3);
         break;
 
     case TE_FLASHLIGHT:
-        read_int16_v( t->pos1, 3 );
+        read_int16_v(t->pos1, 3);
         t->entity1 = read_uint16();
         break;
 
     case TE_FORCEWALL:
-        read_int16_v( t->pos1, 3 );
-        read_int16_v( t->pos2, 3 );
+        read_int16_v(t->pos1, 3);
+        read_int16_v(t->pos2, 3);
         t->color = read_uint8();
         break;
 
     case TE_STEAM:
         t->entity1 = read_uint16();
         t->count = read_uint8();
-        read_int16_v( t->pos1, 3 );
+        read_int16_v(t->pos1, 3);
         t->dir = read_uint8();
         t->color = read_uint8();
         t->entity2 = read_uint16();
-        if( t->entity1 != 0xffff ) {
+        if (t->entity1 != 0xffff) {
             t->time = read_uint32();
         }
         break;
 
     case TE_WIDOWBEAMOUT:
         t->entity1 = read_uint16();
-        read_int16_v( t->pos1, 3 );
+        read_int16_v(t->pos1, 3);
         break;
 
     default:
-        fatal( "unknown temp entity type" );
+        fatal("unknown temp entity type");
     }
 
     return NODE(t);
 }
 
-static node_t *parse_svc( uint8_t *tail ) {
+static node_t *parse_svc(uint8_t *tail)
+{
     unsigned cmd;
     node_t *ret, *n, **next_p;
 
-    if( tail > msg.tail ) {
-        fatal( "read past end of message" );
+    if (tail > msg.tail) {
+        fatal("read past end of message");
     }
 
     next_p = &ret;
-    while( msg.head < tail ) {
+    while (msg.head < tail) {
         cmd = read_uint8();
 
-        switch( cmd ) {
+        switch (cmd) {
         case svc_muzzleflash:
         case svc_muzzleflash2:
-            n = parse_muzzleflash( cmd );
+            n = parse_muzzleflash(cmd);
             break;
         case svc_temp_entity:
             n = parse_temp_entity();
             break;
         case svc_layout:
-            n = parse_string( NODE_LAYOUT );
+            n = parse_string(NODE_LAYOUT);
             break;
         case svc_stufftext:
-            n = parse_string( NODE_STUFFTEXT );
+            n = parse_string(NODE_STUFFTEXT);
             break;
         case svc_centerprint:
-            n = parse_string( NODE_CENTERPRINT );
+            n = parse_string(NODE_CENTERPRINT);
             break;
         //case svc_inventory:
         //    return; // TODO
@@ -521,10 +566,10 @@ static node_t *parse_svc( uint8_t *tail ) {
             n = parse_configstring();
             break;
         case svc_nop:
-            n = alloc_node( NODE_NOP, sizeof( *n ) );
+            n = alloc_node(NODE_NOP, sizeof(*n));
             break;
         default:
-            fatal( "unknown SVC command byte" );
+            fatal("unknown SVC command byte");
         }
         *next_p = n;
         next_p = &n->next;
@@ -534,51 +579,54 @@ static node_t *parse_svc( uint8_t *tail ) {
     return ret;
 }
 
-static node_t *parse_multicast( unsigned cmd, unsigned bits ) {
+static node_t *parse_multicast(unsigned cmd, unsigned bits)
+{
     multicast_t *m;
     size_t len;
 
-    m = alloc_node( NODE_MULTICAST, sizeof( *m ) );
-    m->type = ( cmd - mvd_multicast_all ) % 3;
+    m = alloc_node(NODE_MULTICAST, sizeof(*m));
+    m->type = (cmd - mvd_multicast_all) % 3;
     m->reliable = cmd < mvd_multicast_all_r ? false : true;
 
     len = read_uint8();
     len |= bits << 8;
 
-    if( m->type ) {
+    if (m->type) {
         m->leafnum = read_uint16();
     }
-    m->data = parse_svc( msg.head + len );
+    m->data = parse_svc(msg.head + len);
 
     return NODE(m);
 }
 
-static node_t *parse_unicast( unsigned cmd, unsigned bits ) {
+static node_t *parse_unicast(unsigned cmd, unsigned bits)
+{
     unicast_t *u;
     size_t len;
 
-    u = alloc_node( NODE_UNICAST, sizeof( *u ) );
+    u = alloc_node(NODE_UNICAST, sizeof(*u));
     u->reliable = cmd - mvd_unicast;
 
     len = read_uint8();
     len |= bits << 8;
-    
+
     u->clientnum = read_uint8();
-    u->data = parse_svc( msg.head + len );
+    u->data = parse_svc(msg.head + len);
 
     return NODE(u);
 }
 
-static node_t *parse_mvd_sound( unsigned bits ) {
-    sound_t *s = alloc_node( NODE_SOUND, sizeof( *s ) );
+static node_t *parse_mvd_sound(unsigned bits)
+{
+    sound_t *s = alloc_node(NODE_SOUND, sizeof(*s));
     unsigned channel;
 
     s->flags = bits;
     s->bits = read_uint8();
     s->index = read_uint8();
-    if( s->bits & SND_VOLUME ) s->volume = read_uint8();
-    if( s->bits & SND_ATTENUATION ) s->attenuation = read_uint8();
-    if( s->bits & SND_OFFSET ) s->offset = read_uint8();
+    if (s->bits & SND_VOLUME) s->volume = read_uint8();
+    if (s->bits & SND_ATTENUATION) s->attenuation = read_uint8();
+    if (s->bits & SND_OFFSET) s->offset = read_uint8();
     channel = read_uint16();
     s->entity = channel >> 3;
     s->channel = channel & 7;
@@ -586,19 +634,20 @@ static node_t *parse_mvd_sound( unsigned bits ) {
     return NODE(s);
 }
 
-static node_t *parse_message( void ) {
+static node_t *parse_message(void)
+{
     unsigned cmd, bits;
     node_t *ret, *n, **next_p;
 
     next_p = &ret;
-    while( msg.head < msg.tail ) {
+    while (msg.head < msg.tail) {
         cmd = read_uint8();
         bits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-        switch( cmd ) {
+        switch (cmd) {
         case mvd_serverdata:
-            n = parse_serverdata( bits );
+            n = parse_serverdata(bits);
             break;
         case mvd_multicast_all:
         case mvd_multicast_phs:
@@ -606,11 +655,11 @@ static node_t *parse_message( void ) {
         case mvd_multicast_all_r:
         case mvd_multicast_phs_r:
         case mvd_multicast_pvs_r:
-            n = parse_multicast( cmd, bits );
+            n = parse_multicast(cmd, bits);
             break;
         case mvd_unicast:
         case mvd_unicast_r:
-            n = parse_unicast( cmd, bits );
+            n = parse_unicast(cmd, bits);
             break;
         case mvd_configstring:
             n = parse_configstring();
@@ -619,16 +668,16 @@ static node_t *parse_message( void ) {
             n = parse_frame();
             break;
         case mvd_sound:
-            n = parse_mvd_sound( bits );
+            n = parse_mvd_sound(bits);
             break;
         case mvd_print:
             n = parse_print();
             break;
         case mvd_nop:
-            n = alloc_node( NODE_NOP, sizeof( *n ) );
+            n = alloc_node(NODE_NOP, sizeof(*n));
             break;
         default:
-            fatal( "unknown MVD command byte" );
+            fatal("unknown MVD command byte");
         }
         *next_p = n;
         next_p = &n->next;
@@ -638,33 +687,36 @@ static node_t *parse_message( void ) {
     return ret;
 }
 
-uint8_t *load_bin( FILE *fp, size_t *size_p ) {
+uint8_t *load_bin(FILE *fp, size_t *size_p)
+{
     uint16_t msglen;
 
-    read_raw( &msglen, sizeof( msglen ), fp );
-    if( !msglen ) {
+    read_raw(&msglen, sizeof(msglen), fp);
+    if (!msglen) {
         return NULL;
     }
-    msglen = le16( msglen );
-    if( msglen > MAX_MSGLEN ) {
-        fatal( "msglen > MAX_MSGLEN" );
+    msglen = le16(msglen);
+    if (msglen > MAX_MSGLEN) {
+        fatal("msglen > MAX_MSGLEN");
     }
-    read_raw( msg.data, msglen, fp );
+    read_raw(msg.data, msglen, fp);
     msg.head = msg.data;
     msg.tail = msg.data + msglen;
 
-    if( size_p ) {
+    if (size_p) {
         *size_p = msglen;
     }
     return msg.data;
 }
 
-node_t *read_bin( FILE *fp ) {
-    return load_bin( fp, NULL ) ? parse_message() : NULL;
+node_t *read_bin(FILE *fp)
+{
+    return load_bin(fp, NULL) ? parse_message() : NULL;
 }
 
-node_t *read_bin_size( FILE *fp, size_t *size_p ) {
-    return load_bin( fp, size_p ) ? parse_message() : NULL;
+node_t *read_bin_size(FILE *fp, size_t *size_p)
+{
+    return load_bin(fp, size_p) ? parse_message() : NULL;
 }
 
 //
@@ -675,298 +727,344 @@ node_t *read_bin_size( FILE *fp, size_t *size_p ) {
 size_t trap_pos;
 #endif
 
-static void *get_space( size_t len ) {
+static void *get_space(size_t len)
+{
     void *p;
 
-    if( msg.head + len > msg.tail ) {
-        fatal( "message overflowed" );
+    if (msg.head + len > msg.tail) {
+        fatal("message overflowed");
     }
 
     p = msg.head;
     msg.head += len;
 #ifdef _DEBUG
-    if(msg.head-msg.data>=trap_pos) fatal("trap");
+    if (msg.head - msg.data >= trap_pos) fatal("trap");
 #endif
     return p;
 }
 
-static void write_uint8( unsigned c ) {
-    uint8_t *p = get_space( 1 );
+static void write_uint8(unsigned c)
+{
+    uint8_t *p = get_space(1);
 
     *p = c & 255;
 }
 
 #define write_int16(c) write_uint16((unsigned)c)
 
-static void write_uint16( unsigned c ) {
-    uint8_t *p = get_space( 2 );
+static void write_uint16(unsigned c)
+{
+    uint8_t *p = get_space(2);
 
     p[0] = c & 255;
-    p[1] = ( c >> 8 ) & 255;
+    p[1] = (c >> 8) & 255;
 }
 
-static void write_uint32( unsigned c ) {
-    uint8_t *p = get_space( 4 );
+static void write_uint32(unsigned c)
+{
+    uint8_t *p = get_space(4);
 
     p[0] = c & 255;
-    p[1] = ( c >> 8 ) & 255;
-    p[2] = ( c >> 16 ) & 255;
-    p[3] = ( c >> 24 ) & 255;
+    p[1] = (c >> 8) & 255;
+    p[2] = (c >> 16) & 255;
+    p[3] = (c >> 24) & 255;
 }
 
-static void write_uint8_v( unsigned *v, size_t count ) {
-    uint8_t *p = get_space( count );
+static void write_uint8_v(unsigned *v, size_t count)
+{
+    uint8_t *p = get_space(count);
     size_t i;
 
-    for( i = 0; i < count; i++ ) {
+    for (i = 0; i < count; i++) {
         p[i] = v[i];
     }
 }
 
-static void write_int8_v( int *v, size_t count ) {
-    uint8_t *p = get_space( count );
+static void write_int8_v(int *v, size_t count)
+{
+    uint8_t *p = get_space(count);
     size_t i;
 
-    for( i = 0; i < count; i++ ) {
-        (( char * )p)[i] = v[i];
+    for (i = 0; i < count; i++) {
+        ((char *)p)[i] = v[i];
     }
 }
 
-static void write_int16_v( int *v, size_t count ) {
+static void write_int16_v(int *v, size_t count)
+{
     size_t i;
 
-    for( i = 0; i < count; i++ ) {
-        write_int16( v[i] );
+    for (i = 0; i < count; i++) {
+        write_int16(v[i]);
     }
 }
 
-static void write_data( const void *v, size_t len ) {
-    memcpy( get_space( len ), v, len );
+static void write_data(const void *v, size_t len)
+{
+    memcpy(get_space(len), v, len);
 }
 
-static void write_string( const char *s ) {
-    if( s ) {
-        write_data( s, strlen( s ) + 1 );
+static void write_string(const char *s)
+{
+    if (s) {
+        write_data(s, strlen(s) + 1);
     } else {
-        write_uint8( 0 );
+        write_uint8(0);
     }
 }
 
-static void write_player( player_t *p ) {
+static void write_player(player_t *p)
+{
     int i;
 
-    write_uint8( p->number );
-    write_uint16( p->bits );
-    if( p->bits & P_TYPE ) write_uint8( p->s.pm_type );
-    if( p->bits & P_ORIGIN ) write_int16_v( p->s.origin_xy, 2 );
-    if( p->bits & P_ORIGIN2 ) write_int16( p->s.origin_z );
-    if( p->bits & P_VIEWOFFSET ) write_int8_v( p->s.viewoffset, 3 );
-    if( p->bits & P_VIEWANGLES ) write_int16_v( p->s.viewangles_xy, 2 );
-    if( p->bits & P_VIEWANGLE2 ) write_int16( p->s.viewangle_z );
-    if( p->bits & P_KICKANGLES ) write_int8_v( p->s.kickangles, 3 );
-    if( p->bits & P_WEAPONINDEX ) write_uint8( p->s.weaponindex );
-    if( p->bits & P_WEAPONFRAME ) write_uint8( p->s.weaponframe );
-    if( p->bits & P_GUNOFFSET ) write_int8_v( p->s.gunoffset, 3 );
-    if( p->bits & P_GUNANGLES ) write_int8_v( p->s.gunangles, 3 );
-    if( p->bits & P_BLEND ) write_uint8_v( p->s.blend, 4 );
-    if( p->bits & P_FOV ) write_uint8( p->s.fov );
-    if( p->bits & P_RDFLAGS ) write_uint8( p->s.rdflags );
-    if( p->bits & P_STATS ) {
-        write_uint32( p->statbits );
-        for( i = 0; i < MAX_STATS; i++ ) {
-            if( p->statbits & ( 1 << i ) ) {
-                write_int16( p->s.stats[i] );
+    write_uint8(p->number);
+    write_uint16(p->bits);
+    if (p->bits & P_TYPE) write_uint8(p->s.pm_type);
+    if (p->bits & P_ORIGIN) write_int16_v(p->s.origin_xy, 2);
+    if (p->bits & P_ORIGIN2) write_int16(p->s.origin_z);
+    if (p->bits & P_VIEWOFFSET) write_int8_v(p->s.viewoffset, 3);
+    if (p->bits & P_VIEWANGLES) write_int16_v(p->s.viewangles_xy, 2);
+    if (p->bits & P_VIEWANGLE2) write_int16(p->s.viewangle_z);
+    if (p->bits & P_KICKANGLES) write_int8_v(p->s.kickangles, 3);
+    if (p->bits & P_WEAPONINDEX) write_uint8(p->s.weaponindex);
+    if (p->bits & P_WEAPONFRAME) write_uint8(p->s.weaponframe);
+    if (p->bits & P_GUNOFFSET) write_int8_v(p->s.gunoffset, 3);
+    if (p->bits & P_GUNANGLES) write_int8_v(p->s.gunangles, 3);
+    if (p->bits & P_BLEND) write_uint8_v(p->s.blend, 4);
+    if (p->bits & P_FOV) write_uint8(p->s.fov);
+    if (p->bits & P_RDFLAGS) write_uint8(p->s.rdflags);
+    if (p->bits & P_STATS) {
+        write_uint32(p->statbits);
+        for (i = 0; i < MAX_STATS; i++) {
+            if (p->statbits & (1 << i)) {
+                write_int16(p->s.stats[i]);
             }
         }
     }
 }
 
-static unsigned extend_entity( const entity_t *e ) {
+static unsigned extend_entity(const entity_t *e)
+{
     unsigned bits = e->bits & ~E_EXTENDED;
     unsigned mask = 0xffff0000 | mask_hack;
 
-    if( e->number & 0xff00 ) {
+    if (e->number & 0xff00) {
         bits |= E_NUMBER16;
     }
 
-    if( e->bits & E_FRAME32 ) {
-        if( e->s.frame & 0xff00 ) {
+    if (e->bits & E_FRAME32) {
+        if (e->s.frame & 0xff00) {
             bits |= E_FRAME16;
         } else {
             bits |= E_FRAME8;
         }
     }
-    if( e->bits & E_SKIN32 ) {
-        if( e->s.skin & mask ) {
+    if (e->bits & E_SKIN32) {
+        if (e->s.skin & mask) {
             bits |= E_SKIN32;
-        } else if( e->s.skin & 0x0000ff00 ) {
+        } else if (e->s.skin & 0x0000ff00) {
             bits |= E_SKIN16;
         } else {
             bits |= E_SKIN8;
         }
     }
-    if( e->bits & E_EFFECTS32 ) {
-        if( e->s.effects & mask ) {
+    if (e->bits & E_EFFECTS32) {
+        if (e->s.effects & mask) {
             bits |= E_EFFECTS32;
-        } else if( e->s.effects & 0x0000ff00 ) {
+        } else if (e->s.effects & 0x0000ff00) {
             bits |= E_EFFECTS16;
         } else {
             bits |= E_EFFECTS8;
         }
     }
-    if( e->bits & E_RENDERFX32 ) {
-        if( e->s.renderfx & mask ) {
+    if (e->bits & E_RENDERFX32) {
+        if (e->s.renderfx & mask) {
             bits |= E_RENDERFX32;
-        } else if( e->s.renderfx & 0x0000ff00 ) {
+        } else if (e->s.renderfx & 0x0000ff00) {
             bits |= E_RENDERFX16;
         } else {
             bits |= E_RENDERFX8;
         }
     }
 
-    if( bits & 0xff000000 ) {
-        bits |= E_MOREBITS3|E_MOREBITS2|E_MOREBITS1;
-    } else if( bits & 0x00ff0000 ) {
-        bits |= E_MOREBITS2|E_MOREBITS1;
-    } else if( bits & 0x0000ff00 ) {
+    if (bits & 0xff000000) {
+        bits |= E_MOREBITS3 | E_MOREBITS2 | E_MOREBITS1;
+    } else if (bits & 0x00ff0000) {
+        bits |= E_MOREBITS2 | E_MOREBITS1;
+    } else if (bits & 0x0000ff00) {
         bits |= E_MOREBITS1;
     }
 
     return bits;
 }
 
-static void write_entity( entity_t *e ) {
-    unsigned bits = extend_entity( e );
+static void write_entity(entity_t *e)
+{
+    unsigned bits = extend_entity(e);
 
-    write_uint8( bits & 255 );
-    if( bits & 0xff000000 ) {
-        write_uint8( ( bits >> 8 ) & 255 );
-        write_uint8( ( bits >> 16 ) & 255 );
-        write_uint8( ( bits >> 24 ) & 255 );
-    } else if( bits & 0x00ff0000 ) {
-        write_uint8( ( bits >> 8 ) & 255 );
-        write_uint8( ( bits >> 16 ) & 255 );
-    } else if( bits & 0x0000ff00 ) {
-        write_uint8( ( bits >> 8 ) & 255 );
+    write_uint8(bits & 255);
+    if (bits & 0xff000000) {
+        write_uint8((bits >> 8) & 255);
+        write_uint8((bits >> 16) & 255);
+        write_uint8((bits >> 24) & 255);
+    } else if (bits & 0x00ff0000) {
+        write_uint8((bits >> 8) & 255);
+        write_uint8((bits >> 16) & 255);
+    } else if (bits & 0x0000ff00) {
+        write_uint8((bits >> 8) & 255);
     }
 
-    if( bits & E_NUMBER16 ) {
-        write_uint16( e->number );
+    if (bits & E_NUMBER16) {
+        write_uint16(e->number);
     } else {
-        write_uint8( e->number );
+        write_uint8(e->number);
     }
-    if( bits & E_MODEL ) write_uint8( e->s.modelindex );
-    if( bits & E_MODEL2 ) write_uint8( e->s.modelindex2 );
-    if( bits & E_MODEL3 ) write_uint8( e->s.modelindex3 );
-    if( bits & E_MODEL4 ) write_uint8( e->s.modelindex4 );
-    switch( bits & E_FRAME32 ) {
-        case E_FRAME32: fatal( "E_FRAME32 is not supported" );
-        case E_FRAME16: write_uint16( e->s.frame ); break;
-        case E_FRAME8: write_uint8( e->s.frame ); break;
+    if (bits & E_MODEL) write_uint8(e->s.modelindex);
+    if (bits & E_MODEL2) write_uint8(e->s.modelindex2);
+    if (bits & E_MODEL3) write_uint8(e->s.modelindex3);
+    if (bits & E_MODEL4) write_uint8(e->s.modelindex4);
+    switch (bits & E_FRAME32) {
+    case E_FRAME32:
+        fatal("E_FRAME32 is not supported");
+    case E_FRAME16:
+        write_uint16(e->s.frame);
+        break;
+    case E_FRAME8:
+        write_uint8(e->s.frame);
+        break;
     }
-    switch( bits & E_SKIN32 ) {
-        case E_SKIN32: write_uint32( e->s.skin ); break;
-        case E_SKIN16: write_uint16( e->s.skin ); break;
-        case E_SKIN8: write_uint8( e->s.skin ); break;
+    switch (bits & E_SKIN32) {
+    case E_SKIN32:
+        write_uint32(e->s.skin);
+        break;
+    case E_SKIN16:
+        write_uint16(e->s.skin);
+        break;
+    case E_SKIN8:
+        write_uint8(e->s.skin);
+        break;
     }
-    switch( bits & E_EFFECTS32 ) {
-        case E_EFFECTS32: write_uint32( e->s.effects ); break;
-        case E_EFFECTS16: write_uint16( e->s.effects ); break;
-        case E_EFFECTS8: write_uint8( e->s.effects ); break;
+    switch (bits & E_EFFECTS32) {
+    case E_EFFECTS32:
+        write_uint32(e->s.effects);
+        break;
+    case E_EFFECTS16:
+        write_uint16(e->s.effects);
+        break;
+    case E_EFFECTS8:
+        write_uint8(e->s.effects);
+        break;
     }
-    switch( bits & E_RENDERFX32 ) {
-        case E_RENDERFX32: write_uint32( e->s.renderfx ); break;
-        case E_RENDERFX16: write_uint16( e->s.renderfx ); break;
-        case E_RENDERFX8: write_uint8( e->s.renderfx ); break;
+    switch (bits & E_RENDERFX32) {
+    case E_RENDERFX32:
+        write_uint32(e->s.renderfx);
+        break;
+    case E_RENDERFX16:
+        write_uint16(e->s.renderfx);
+        break;
+    case E_RENDERFX8:
+        write_uint8(e->s.renderfx);
+        break;
     }
-    if( bits & E_ORIGIN1 ) write_int16( e->s.origin_x );
-    if( bits & E_ORIGIN2 ) write_int16( e->s.origin_y );
-    if( bits & E_ORIGIN3 ) write_int16( e->s.origin_z );
-    if( bits & E_ANGLE1 ) write_uint8( e->s.angle_x );
-    if( bits & E_ANGLE2 ) write_uint8( e->s.angle_y );
-    if( bits & E_ANGLE3 ) write_uint8( e->s.angle_z );
-    if( bits & E_OLDORIGIN ) write_int16_v( e->s.old_origin, 3 );
-    if( bits & E_SOUND ) write_uint8( e->s.sound );
-    if( bits & E_EVENT ) write_uint8( e->s.event );
-    if( bits & E_SOLID ) write_uint16( e->s.solid );
+    if (bits & E_ORIGIN1) write_int16(e->s.origin_x);
+    if (bits & E_ORIGIN2) write_int16(e->s.origin_y);
+    if (bits & E_ORIGIN3) write_int16(e->s.origin_z);
+    if (bits & E_ANGLE1) write_uint8(e->s.angle_x);
+    if (bits & E_ANGLE2) write_uint8(e->s.angle_y);
+    if (bits & E_ANGLE3) write_uint8(e->s.angle_z);
+    if (bits & E_OLDORIGIN) write_int16_v(e->s.old_origin, 3);
+    if (bits & E_SOUND) write_uint8(e->s.sound);
+    if (bits & E_EVENT) write_uint8(e->s.event);
+    if (bits & E_SOLID) write_uint16(e->s.solid);
 }
 
-static void write_blob( blob_t *b ) {
-    if( !b ) {
-        write_uint8( 0 );
+static void write_blob(blob_t *b)
+{
+    if (!b) {
+        write_uint8(0);
         return;
     }
-    write_uint8( b->len );
-    write_data( b->data, b->len );
+    write_uint8(b->len);
+    write_data(b->data, b->len);
 }
 
-static void _write_frame( frame_t *f ) {
-    write_blob( ( blob_t * )f->portalbits );
-    iter_list( f->players, write_player );
-    write_uint8( CLIENTNUM_NONE );
-    iter_list( f->entities, write_entity );
-    write_uint16( 0 );
+static void _write_frame(frame_t *f)
+{
+    write_blob((blob_t *)f->portalbits);
+    iter_list(f->players, write_player);
+    write_uint8(CLIENTNUM_NONE);
+    iter_list(f->entities, write_entity);
+    write_uint16(0);
 }
 
-static void write_frame( frame_t *f ) {
-    write_uint8( mvd_frame );
-    _write_frame( f );
+static void write_frame(frame_t *f)
+{
+    write_uint8(mvd_frame);
+    _write_frame(f);
 }
 
-static void _write_configstring( string_t *s ) {
-    write_uint16( s->index );
-    write_string( s->data );
+static void _write_configstring(string_t *s)
+{
+    write_uint16(s->index);
+    write_string(s->data);
 }
 
-static void write_configstring( string_t *s, unsigned cmd ) {
-    write_uint8( cmd );
-    _write_configstring( s );
+static void write_configstring(string_t *s, unsigned cmd)
+{
+    write_uint8(cmd);
+    _write_configstring(s);
 }
 
-static void write_gamestate( game_state_t *g ) {
-    write_uint8( mvd_serverdata | ( g->mvdflags << SVCMD_BITS ) );
-    write_uint32( g->majorversion );
-    write_uint16( g->minorversion );
-    write_uint32( g->servercount );
-    write_string( g->gamedir );
-    write_uint16( g->clientnum );
-    iter_list( g->configstrings, _write_configstring );
-    write_uint16( MAX_CONFIGSTRINGS );
-    _write_frame( ( frame_t * )g->baseframe );
+static void write_gamestate(game_state_t *g)
+{
+    write_uint8(mvd_serverdata | (g->mvdflags << SVCMD_BITS));
+    write_uint32(g->majorversion);
+    write_uint16(g->minorversion);
+    write_uint32(g->servercount);
+    write_string(g->gamedir);
+    write_uint16(g->clientnum);
+    iter_list(g->configstrings, _write_configstring);
+    write_uint16(MAX_CONFIGSTRINGS);
+    _write_frame((frame_t *)g->baseframe);
 }
 
-static void write_svc_string( string_t *s, unsigned cmd ) {
-    write_uint8( cmd );
-    write_string( s->data );
+static void write_svc_string(string_t *s, unsigned cmd)
+{
+    write_uint8(cmd);
+    write_string(s->data);
 }
 
-static void write_print( string_t *s, unsigned cmd ) {
-    write_uint8( cmd );
-    write_uint8( s->index );
-    write_string( s->data );
+static void write_print(string_t *s, unsigned cmd)
+{
+    write_uint8(cmd);
+    write_uint8(s->index);
+    write_string(s->data);
 }
 
-static void write_muzzleflash( muzzleflash_t *m ) {
-    write_uint8( svc_muzzleflash + m->type );
-    write_uint16( m->entity );
-    write_uint8( m->weapon );
+static void write_muzzleflash(muzzleflash_t *m)
+{
+    write_uint8(svc_muzzleflash + m->type);
+    write_uint16(m->entity);
+    write_uint8(m->weapon);
 }
 
-static void write_svc_sound( sound_t *s ) {
-    write_uint8( svc_sound );
-    write_uint8( s->bits );
-    write_uint8( s->index );
-    if( s->bits & SND_VOLUME ) write_uint8( s->volume );
-    if( s->bits & SND_ATTENUATION ) write_uint8( s->attenuation );
-    if( s->bits & SND_OFFSET ) write_uint8( s->offset );
-    if( s->bits & SND_ENT ) write_uint16( ( s->entity << 3 ) | s->channel );
-    if( s->bits & SND_POS ) write_int16_v( s->pos, 3 );
+static void write_svc_sound(sound_t *s)
+{
+    write_uint8(svc_sound);
+    write_uint8(s->bits);
+    write_uint8(s->index);
+    if (s->bits & SND_VOLUME) write_uint8(s->volume);
+    if (s->bits & SND_ATTENUATION) write_uint8(s->attenuation);
+    if (s->bits & SND_OFFSET) write_uint8(s->offset);
+    if (s->bits & SND_ENT) write_uint16((s->entity << 3) | s->channel);
+    if (s->bits & SND_POS) write_int16_v(s->pos, 3);
 }
 
-static void write_temp_entity( tent_t *t ) {
-    write_uint8( svc_temp_entity );
-    write_uint8( t->type );
-    switch( t->type ) {
+static void write_temp_entity(tent_t *t)
+{
+    write_uint8(svc_temp_entity);
+    write_uint8(t->type);
+    switch (t->type) {
     case TE_BLOOD:
     case TE_GUNSHOT:
     case TE_SPARKS:
@@ -982,18 +1080,18 @@ static void write_temp_entity( tent_t *t ) {
     case TE_HEATBEAM_STEAM:
     case TE_MOREBLOOD:
     case TE_ELECTRIC_SPARKS:
-        write_int16_v( t->pos1, 3 );
-        write_uint8( t->dir );
+        write_int16_v(t->pos1, 3);
+        write_uint8(t->dir);
         break;
 
     case TE_SPLASH:
     case TE_LASER_SPARKS:
     case TE_WELDING_SPARKS:
     case TE_TUNNEL_SPARKS:
-        write_uint8( t->count );
-        write_int16_v( t->pos1, 3 );
-        write_uint8( t->dir );
-        write_uint8( t->color );
+        write_uint8(t->count);
+        write_int16_v(t->pos1, 3);
+        write_uint8(t->dir);
+        write_uint8(t->color);
         break;
 
     case TE_BLUEHYPERBLASTER:
@@ -1002,8 +1100,8 @@ static void write_temp_entity( tent_t *t ) {
     case TE_DEBUGTRAIL:
     case TE_BUBBLETRAIL2:
     case TE_BFG_LASER:
-        write_int16_v( t->pos1, 3 );
-        write_int16_v( t->pos2, 3 );
+        write_int16_v(t->pos1, 3);
+        write_int16_v(t->pos2, 3);
         break;
 
     case TE_GRENADE_EXPLOSION:
@@ -1025,183 +1123,190 @@ static void write_temp_entity( tent_t *t ) {
     case TE_DBALL_GOAL:
     case TE_WIDOWSPLASH:
     case TE_NUKEBLAST:
-        write_int16_v( t->pos1, 3 );
+        write_int16_v(t->pos1, 3);
         break;
 
     case TE_PARASITE_ATTACK:
     case TE_MEDIC_CABLE_ATTACK:
     case TE_HEATBEAM:
     case TE_MONSTER_HEATBEAM:
-        write_uint16( t->entity1 );
-        write_int16_v( t->pos1, 3 );
-        write_int16_v( t->pos2, 3 );
+        write_uint16(t->entity1);
+        write_int16_v(t->pos1, 3);
+        write_int16_v(t->pos2, 3);
         break;
 
     case TE_GRAPPLE_CABLE:
-        write_uint16( t->entity1 );
-        write_int16_v( t->pos1, 3 );
-        write_int16_v( t->pos2, 3 );
-        write_int16_v( t->offset, 3 );
+        write_uint16(t->entity1);
+        write_int16_v(t->pos1, 3);
+        write_int16_v(t->pos2, 3);
+        write_int16_v(t->offset, 3);
         break;
 
     case TE_LIGHTNING:
-        write_uint16( t->entity1 );
-        write_uint16( t->entity2 );
-        write_int16_v( t->pos1, 3 );
-        write_int16_v( t->pos2, 3 );
+        write_uint16(t->entity1);
+        write_uint16(t->entity2);
+        write_int16_v(t->pos1, 3);
+        write_int16_v(t->pos2, 3);
         break;
 
     case TE_FLASHLIGHT:
-        write_int16_v( t->pos1, 3 );
-        write_uint16( t->entity1 );
+        write_int16_v(t->pos1, 3);
+        write_uint16(t->entity1);
         break;
 
     case TE_FORCEWALL:
-        write_int16_v( t->pos1, 3 );
-        write_int16_v( t->pos2, 3 );
-        write_uint8( t->color );
+        write_int16_v(t->pos1, 3);
+        write_int16_v(t->pos2, 3);
+        write_uint8(t->color);
         break;
 
     case TE_STEAM:
-        write_uint16( t->entity1 );
-        write_uint8( t->count );
-        write_int16_v( t->pos1, 3 );
-        write_uint8( t->dir );
-        write_uint8( t->color );
-        write_uint16( t->entity2 );
-        if( t->entity1 != 0xffff ) {
-           write_uint32( t->time );
+        write_uint16(t->entity1);
+        write_uint8(t->count);
+        write_int16_v(t->pos1, 3);
+        write_uint8(t->dir);
+        write_uint8(t->color);
+        write_uint16(t->entity2);
+        if (t->entity1 != 0xffff) {
+            write_uint32(t->time);
         }
         break;
 
     case TE_WIDOWBEAMOUT:
-        write_uint16( t->entity1 );
-        write_int16_v( t->pos1, 3 );
+        write_uint16(t->entity1);
+        write_int16_v(t->pos1, 3);
         break;
 
     default:
-        fatal( "bad temp entity type" );
+        fatal("bad temp entity type");
     }
 }
 
-static void write_svc( void *n ) {
-    switch( ((node_t *)n)->type ) {
+static void write_svc(void *n)
+{
+    switch (((node_t *)n)->type) {
     case NODE_MUZZLEFLASH:
-        write_muzzleflash( n );
+        write_muzzleflash(n);
         break;
     case NODE_TEMP_ENTITY:
-        write_temp_entity( n );
+        write_temp_entity(n);
         break;
     case NODE_LAYOUT:
-        write_svc_string( n, svc_layout );
+        write_svc_string(n, svc_layout);
         break;
     case NODE_STUFFTEXT:
-        write_svc_string( n, svc_stufftext );
+        write_svc_string(n, svc_stufftext);
         break;
     case NODE_CENTERPRINT:
-        write_svc_string( n, svc_centerprint );
+        write_svc_string(n, svc_centerprint);
         break;
     case NODE_CONFIGSTRING:
-        write_configstring( n, svc_configstring );
+        write_configstring(n, svc_configstring);
         break;
     case NODE_SOUND:
-        write_svc_sound( n );
+        write_svc_sound(n);
         break;
     case NODE_PRINT:
-        write_print( n, svc_print );
+        write_print(n, svc_print);
         break;
     case NODE_NOP:
-        write_uint8( svc_nop );
+        write_uint8(svc_nop);
         break;
     default:
-        fatal( "bad node type" );
+        fatal("bad node type");
     }
 }
 
-static void write_svc_hdr( uint8_t *hdr, unsigned cmd, node_t *data ) {
+static void write_svc_hdr(uint8_t *hdr, unsigned cmd, node_t *data)
+{
     uint8_t *ptr;
     size_t len;
     unsigned bits;
 
     ptr = msg.head;
-    iter_list( data, write_svc );
+    iter_list(data, write_svc);
     len = msg.head - ptr;
 
-    bits = ( len >> 8 ) & 7;
-    hdr[0] = cmd | ( bits << SVCMD_BITS );
+    bits = (len >> 8) & 7;
+    hdr[0] = cmd | (bits << SVCMD_BITS);
     hdr[1] = len & 255;
 }
 
-static void write_unicast( unicast_t *u ) {
-    uint8_t *hdr = get_space( 2 );
+static void write_unicast(unicast_t *u)
+{
+    uint8_t *hdr = get_space(2);
     unsigned cmd = mvd_unicast + u->reliable;
 
-    write_uint8( u->clientnum );
-    write_svc_hdr( hdr, cmd, u->data );
+    write_uint8(u->clientnum);
+    write_svc_hdr(hdr, cmd, u->data);
 }
 
-static void write_multicast( multicast_t *m ) {
-    uint8_t *hdr = get_space( 2 );
+static void write_multicast(multicast_t *m)
+{
+    uint8_t *hdr = get_space(2);
     unsigned cmd = mvd_multicast_all + m->type + m->reliable * 3;
 
-    if( m->type ) {
-        write_uint16( m->leafnum );
+    if (m->type) {
+        write_uint16(m->leafnum);
     }
-    write_svc_hdr( hdr, cmd, m->data );
+    write_svc_hdr(hdr, cmd, m->data);
 }
 
-static void write_mvd_sound( sound_t *s ) {
-    write_uint8( mvd_sound | ( s->flags << SVCMD_BITS ) );
-    write_uint8( s->bits & ~SND_POS ); // strip SND_POS, it is never used
-    write_uint8( s->index );
-    if( s->bits & SND_VOLUME ) write_uint8( s->volume );
-    if( s->bits & SND_ATTENUATION ) write_uint8( s->attenuation );
-    if( s->bits & SND_OFFSET ) write_uint8( s->offset );
-    write_uint16( ( s->entity << 3 ) | s->channel );
+static void write_mvd_sound(sound_t *s)
+{
+    write_uint8(mvd_sound | (s->flags << SVCMD_BITS));
+    write_uint8(s->bits & ~SND_POS);   // strip SND_POS, it is never used
+    write_uint8(s->index);
+    if (s->bits & SND_VOLUME) write_uint8(s->volume);
+    if (s->bits & SND_ATTENUATION) write_uint8(s->attenuation);
+    if (s->bits & SND_OFFSET) write_uint8(s->offset);
+    write_uint16((s->entity << 3) | s->channel);
 }
 
-static void write_node( void *n ) {
-    switch( ((node_t *)n)->type ) {
+static void write_node(void *n)
+{
+    switch (((node_t *)n)->type) {
     case NODE_GAMESTATE:
-        write_gamestate( n );
+        write_gamestate(n);
         break;
     case NODE_MULTICAST:
-        write_multicast( n );
+        write_multicast(n);
         break;
     case NODE_UNICAST:
-        write_unicast( n );
+        write_unicast(n);
         break;
     case NODE_CONFIGSTRING:
-        write_configstring( n, mvd_configstring );
+        write_configstring(n, mvd_configstring);
         break;
     case NODE_FRAME:
-        write_frame( n );
+        write_frame(n);
         break;
     case NODE_SOUND:
-        write_mvd_sound( n );
+        write_mvd_sound(n);
         break;
     case NODE_PRINT:
-        write_print( n, mvd_print );
+        write_print(n, mvd_print);
         break;
     case NODE_NOP:
-        write_uint8( mvd_nop );
+        write_uint8(mvd_nop);
         break;
     default:
-        fatal( "bad node type" );
+        fatal("bad node type");
     }
 }
 
-size_t write_bin( FILE *fp, node_t *nodes ) {
+size_t write_bin(FILE *fp, node_t *nodes)
+{
     uint16_t msglen;
 
     msg.tail = msg.data + MAX_MSGLEN;
     msg.head = msg.data;
-    iter_list( nodes, write_node );
+    iter_list(nodes, write_node);
 
-    msglen = le16( msg.head - msg.data );
-    write_raw( &msglen, sizeof( msglen ), fp );
+    msglen = le16(msg.head - msg.data);
+    write_raw(&msglen, sizeof(msglen), fp);
 
-    write_raw( msg.data, msglen, fp );
+    write_raw(msg.data, msglen, fp);
 
     return msglen;
 }
