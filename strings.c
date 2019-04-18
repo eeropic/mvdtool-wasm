@@ -79,6 +79,13 @@ static void parse_gamestate(game_state_t *g)
     clientnum = g->clientnum;
 }
 
+static void parse_serverdata(serverdata_t *s)
+{
+    print("-----------------------\n");
+    print(s->levelname);
+    print("\n");
+}
+
 static void parse_print(string_t *s)
 {
     if (what & (1 << s->index)) {
@@ -127,6 +134,9 @@ static void parse_message(void *n)
         case NODE_GAMESTATE:
             parse_gamestate(n);
             break;
+        case NODE_SERVERDATA:
+            parse_serverdata(n);
+            break;
         case NODE_CONFIGSTRING:
             //parse_configstring( n );
             break;
@@ -147,8 +157,6 @@ static void parse_message(void *n)
 
 int strings_main(void)
 {
-    uint32_t magic;
-
     ifp = stdin;
     ofp = stdout;
 
@@ -167,13 +175,8 @@ int strings_main(void)
         }
     }
 
-    read_raw(&magic, sizeof(magic), ifp);
-    if (magic != MVD_MAGIC) {
-        fatal("not a MVD2 file");
-    }
-
     while (!feof(ifp)) {
-        void *n = read_bin(ifp);
+        void *n = read_bin_any(ifp);
         if (!n) {
             break;
         }

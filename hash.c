@@ -34,7 +34,7 @@ int hash_main(void)
     }
 
     read_raw(&magic, sizeof(magic), ifp);
-    if (magic != le32(MVD_MAGIC)) {
+    if (magic != MVD_MAGIC) {
         fatal("not a MVD2 file");
     }
 

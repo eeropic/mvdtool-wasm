@@ -3,6 +3,7 @@ typedef struct node_s {
     enum {
         NODE_NOP,
         NODE_GAMESTATE,
+        NODE_SERVERDATA,
         NODE_CONFIGSTRING,
         NODE_FRAME,
         NODE_UNICAST,
@@ -39,8 +40,13 @@ typedef struct node_s {
 
 typedef struct {
     unsigned    pm_type;
+    unsigned    pm_flags;
+    unsigned    pm_time;
+    int         pm_gravity;
     int         origin_xy[2];
     int         origin_z;
+    int         velocity[3];
+    int         delta_angles[3];
     int         viewoffset[3];
     int         viewangles_xy[2];
     int         viewangle_z;
@@ -119,6 +125,9 @@ typedef struct {
 
 typedef struct {
     node_t node;
+    unsigned number;
+    unsigned delta;
+    unsigned suppressed;
     node_t *portalbits;
     node_t *players;
     node_t *entities;
@@ -142,6 +151,16 @@ typedef struct {
     node_t *configstrings;
     node_t *baseframe;
 } game_state_t;
+
+typedef struct {
+    node_t node;
+    unsigned majorversion;
+    unsigned servercount;
+    unsigned attractloop;
+    int clientnum;
+    char gamedir[MAX_QPATH];
+    char levelname[MAX_QPATH];
+} serverdata_t;
 
 typedef struct {
     node_t node;

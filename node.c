@@ -54,14 +54,9 @@ void free_node(void *n)
     case NODE_FRAME:
         free_frame(n);
         break;
-    case NODE_CONFIGSTRING:
-    case NODE_SOUND:
-    case NODE_PRINT:
-    case NODE_NOP:
+    default:
         free(n);
         break;
-    default:
-        fatal("bad node type");
     }
 }
 

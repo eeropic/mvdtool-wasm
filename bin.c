@@ -524,9 +524,50 @@ static node_t *parse_temp_entity(void)
     return NODE(t);
 }
 
+static node_t *_parse_svc(unsigned cmd)
+{
+    node_t *n;
+
+    switch (cmd) {
+    case svc_muzzleflash:
+    case svc_muzzleflash2:
+        n = parse_muzzleflash(cmd);
+        break;
+    case svc_temp_entity:
+        n = parse_temp_entity();
+        break;
+    case svc_layout:
+        n = parse_string(NODE_LAYOUT);
+        break;
+    case svc_stufftext:
+        n = parse_string(NODE_STUFFTEXT);
+        break;
+    case svc_centerprint:
+        n = parse_string(NODE_CENTERPRINT);
+        break;
+    //case svc_inventory:
+    //    return; // TODO
+    case svc_sound:
+        n = parse_svc_sound();
+        break;
+    case svc_print:
+        n = parse_print();
+        break;
+    case svc_configstring:
+        n = parse_configstring();
+        break;
+    case svc_nop:
+        n = alloc_node(NODE_NOP, sizeof(*n));
+        break;
+    default:
+        fatal("unknown SVC command byte");
+    }
+
+    return n;
+}
+
 static node_t *parse_svc(size_t tail)
 {
-    unsigned cmd;
     node_t *ret, *n, **next_p;
 
     if (tail > msg.tail) {
@@ -535,42 +576,7 @@ static node_t *parse_svc(size_t tail)
 
     next_p = &ret;
     while (msg.head < tail) {
-        cmd = read_uint8();
-
-        switch (cmd) {
-        case svc_muzzleflash:
-        case svc_muzzleflash2:
-            n = parse_muzzleflash(cmd);
-            break;
-        case svc_temp_entity:
-            n = parse_temp_entity();
-            break;
-        case svc_layout:
-            n = parse_string(NODE_LAYOUT);
-            break;
-        case svc_stufftext:
-            n = parse_string(NODE_STUFFTEXT);
-            break;
-        case svc_centerprint:
-            n = parse_string(NODE_CENTERPRINT);
-            break;
-        //case svc_inventory:
-        //    return; // TODO
-        case svc_sound:
-            n = parse_svc_sound();
-            break;
-        case svc_print:
-            n = parse_print();
-            break;
-        case svc_configstring:
-            n = parse_configstring();
-            break;
-        case svc_nop:
-            n = alloc_node(NODE_NOP, sizeof(*n));
-            break;
-        default:
-            fatal("unknown SVC command byte");
-        }
+        n = _parse_svc(read_uint8());
         *next_p = n;
         next_p = &n->next;
     }
@@ -634,57 +640,59 @@ static node_t *parse_mvd_sound(unsigned bits)
     return NODE(s);
 }
 
-static node_t *parse_message(void)
+static node_t *_parse_message(void)
 {
     unsigned cmd, bits;
-    node_t *ret, *n, **next_p;
+    node_t *n;
 
-    next_p = &ret;
-    while (msg.head < msg.tail) {
-        cmd = read_uint8();
-        bits = cmd >> SVCMD_BITS;
-        cmd &= SVCMD_MASK;
+    if (msg.head >= msg.tail)
+        return NULL;
 
-        switch (cmd) {
-        case mvd_serverdata:
-            n = parse_serverdata(bits);
-            break;
-        case mvd_multicast_all:
-        case mvd_multicast_phs:
-        case mvd_multicast_pvs:
-        case mvd_multicast_all_r:
-        case mvd_multicast_phs_r:
-        case mvd_multicast_pvs_r:
-            n = parse_multicast(cmd, bits);
-            break;
-        case mvd_unicast:
-        case mvd_unicast_r:
-            n = parse_unicast(cmd, bits);
-            break;
-        case mvd_configstring:
-            n = parse_configstring();
-            break;
-        case mvd_frame:
-            n = parse_frame();
-            break;
-        case mvd_sound:
-            n = parse_mvd_sound(bits);
-            break;
-        case mvd_print:
-            n = parse_print();
-            break;
-        case mvd_nop:
-            n = alloc_node(NODE_NOP, sizeof(*n));
-            break;
-        default:
-            fatal("unknown MVD command byte");
-        }
-        *next_p = n;
-        next_p = &n->next;
+    cmd = read_uint8();
+    bits = cmd >> SVCMD_BITS;
+    cmd &= SVCMD_MASK;
+
+    switch (cmd) {
+    case mvd_serverdata:
+        n = parse_serverdata(bits);
+        break;
+    case mvd_multicast_all:
+    case mvd_multicast_phs:
+    case mvd_multicast_pvs:
+    case mvd_multicast_all_r:
+    case mvd_multicast_phs_r:
+    case mvd_multicast_pvs_r:
+        n = parse_multicast(cmd, bits);
+        break;
+    case mvd_unicast:
+    case mvd_unicast_r:
+        n = parse_unicast(cmd, bits);
+        break;
+    case mvd_configstring:
+        n = parse_configstring();
+        break;
+    case mvd_frame:
+        n = parse_frame();
+        break;
+    case mvd_sound:
+        n = parse_mvd_sound(bits);
+        break;
+    case mvd_print:
+        n = parse_print();
+        break;
+    case mvd_nop:
+        n = alloc_node(NODE_NOP, sizeof(*n));
+        break;
+    default:
+        fatal("unknown MVD command byte");
     }
-    *next_p = NULL;
 
-    return ret;
+    return n;
+}
+
+static node_t *parse_message(void)
+{
+    return build_list(_parse_message);
 }
 
 uint8_t *load_bin(FILE *fp, size_t *size_p)
@@ -717,6 +725,216 @@ node_t *read_bin(FILE *fp)
 node_t *read_bin_size(FILE *fp, size_t *size_p)
 {
     return load_bin(fp, size_p) ? parse_message() : NULL;
+}
+
+static node_t *parse_svc_serverdata(void)
+{
+    serverdata_t *s;
+
+    s = alloc_node(NODE_SERVERDATA, sizeof(*s));
+    s->majorversion = read_uint32();
+    s->servercount = read_uint32();
+    s->attractloop = read_uint8();
+    read_string(s->gamedir, sizeof(s->gamedir));
+    s->clientnum = read_int16();
+    read_string(s->levelname, sizeof(s->levelname));
+
+    return NODE(s);
+}
+
+static node_t *parse_svc_player(void)
+{
+    player_t *p;
+    unsigned bits;
+    int i;
+
+    bits = read_int16();
+
+    p = alloc_node(NODE_PLAYER, sizeof(*p));
+    p->number = CLIENTNUM_NONE;
+    p->bits = bits;
+
+    if (bits & PS_TYPE) {
+        p->s.pm_type = read_uint8();
+    }
+    if (bits & PS_ORIGIN) {
+        read_int16_v(p->s.origin_xy, 2);
+        p->s.origin_z = read_int16();
+    }
+    if (bits & PS_VELOCITY) {
+        read_int16_v(p->s.velocity, 3);
+    }
+    if (bits & PS_TIME) {
+        p->s.pm_time = read_uint8();
+    }
+    if (bits & PS_FLAGS) {
+        p->s.pm_flags = read_uint8();
+    }
+    if (bits & PS_GRAVITY) {
+        p->s.pm_gravity = read_int16();
+    }
+    if (bits & PS_DELTA_ANGLES) {
+        read_int16_v(p->s.delta_angles, 3);
+    }
+    if (bits & PS_VIEWOFFSET) {
+        read_int8_v(p->s.viewoffset, 3);
+    }
+    if (bits & PS_VIEWANGLES) {
+        read_int16_v(p->s.viewangles_xy, 2);
+        p->s.viewangle_z = read_int16();
+    }
+    if (bits & PS_KICKANGLES) {
+        read_int8_v(p->s.kickangles, 3);
+    }
+    if (bits & PS_WEAPONINDEX) {
+        p->s.weaponindex = read_uint8();
+    }
+    if (bits & PS_WEAPONFRAME) {
+        p->s.weaponframe = read_uint8();
+        read_int8_v(p->s.gunoffset, 3);
+        read_int8_v(p->s.gunangles, 3);
+    }
+    if (bits & PS_BLEND) {
+        read_uint8_v(p->s.blend, 4);
+    }
+    if (bits & PS_FOV) {
+        p->s.fov = read_uint8();
+    }
+    if (bits & PS_RDFLAGS) {
+        p->s.rdflags = read_uint8();
+    }
+
+    p->statbits = read_uint32();
+    if (p->statbits) {
+        for (i = 0; i < MAX_STATS; i++) {
+            if (p->statbits & (1U << i)) {
+                p->s.stats[i] = read_int16();
+            }
+        }
+    }
+
+    return NODE(p);
+}
+
+static node_t *parse_svc_frame(void)
+{
+    frame_t *f = alloc_node(NODE_FRAME, sizeof(*f));
+
+    f->number = read_uint32();
+    f->delta = read_uint32();
+    f->suppressed = read_uint8();
+    f->portalbits = parse_blob();
+    if (read_uint8() != svc_playerinfo) {
+        fatal("not playerinfo");
+    }
+    f->players = parse_svc_player();
+    if (read_uint8() != svc_packetentities) {
+        fatal("not packetentities");
+    }
+    f->entities = build_list(parse_entity);
+
+    return NODE(f);
+}
+
+static node_t *_parse_svc_message(void)
+{
+    unsigned cmd;
+    node_t *n;
+
+    if (msg.head >= msg.tail)
+        return NULL;
+
+    cmd = read_uint8();
+
+    switch (cmd) {
+    case svc_serverdata:
+        n = parse_svc_serverdata();
+        break;
+    case svc_frame:
+        n = parse_svc_frame();
+        break;
+    case svc_spawnbaseline:
+        if ((n = parse_entity()) == NULL) {
+            fatal("bad entity number");
+        }
+        break;
+    default:
+        n = _parse_svc(cmd);
+        break;
+    }
+
+    return n;
+}
+
+static node_t *parse_svc_message(void)
+{
+    return build_list(_parse_svc_message);
+}
+
+uint8_t *load_dm2_bin(FILE *fp, size_t *size_p)
+{
+    uint32_t msglen;
+
+    read_raw(&msglen, sizeof(msglen), fp);
+    if (!msglen) {
+        return NULL;
+    }
+    if (msglen == (uint32_t)-1) {
+        return NULL;
+    }
+    msglen = le32(msglen);
+    if (msglen > MAX_MSGLEN) {
+        fatal("msglen > MAX_MSGLEN");
+    }
+    read_raw(msg.data, msglen, fp);
+    msg.head = 0;
+    msg.tail = msglen;
+
+    if (size_p) {
+        *size_p = msglen;
+    }
+    return msg.data;
+}
+
+node_t *read_dm2_bin(FILE *fp)
+{
+    return load_dm2_bin(fp, NULL) ? parse_svc_message() : NULL;
+}
+
+node_t *read_bin_any(FILE *fp)
+{
+    static int format;
+
+    if (!format) {
+        uint32_t magic, msglen;
+
+        read_raw(&magic, sizeof(magic), fp);
+        if (magic == MVD_MAGIC) {
+            format = 1;
+            return read_bin(fp);
+        }
+
+        msglen = le32(magic);
+        if (msglen < 14 || msglen > MAX_MSGLEN) {
+            fatal("unknown file format");
+        }
+
+        read_raw(msg.data, msglen, fp);
+        if (memcmp(msg.data, (const uint8_t [5]){ 0x0C, 0x22 }, 5)) {
+            fatal("unknown file format");
+        }
+
+        msg.head = 0;
+        msg.tail = msglen;
+
+        format = 2;
+        return parse_svc_message();
+    }
+
+    if (format == 1)
+        return read_bin(fp);
+
+    return read_dm2_bin(fp);
 }
 
 //
@@ -813,10 +1031,20 @@ static void write_string(const char *s)
     }
 }
 
-static void write_player(player_t *p)
+static void write_player_stats(player_t *p)
 {
     int i;
 
+    write_uint32(p->statbits);
+    for (i = 0; i < MAX_STATS; i++) {
+        if (p->statbits & (1U << i)) {
+            write_int16(p->s.stats[i]);
+        }
+    }
+}
+
+static void write_player(player_t *p)
+{
     write_uint8(p->number);
     write_uint16(p->bits);
     if (p->bits & P_TYPE) write_uint8(p->s.pm_type);
@@ -833,14 +1061,7 @@ static void write_player(player_t *p)
     if (p->bits & P_BLEND) write_uint8_v(p->s.blend, 4);
     if (p->bits & P_FOV) write_uint8(p->s.fov);
     if (p->bits & P_RDFLAGS) write_uint8(p->s.rdflags);
-    if (p->bits & P_STATS) {
-        write_uint32(p->statbits);
-        for (i = 0; i < MAX_STATS; i++) {
-            if (p->statbits & (1U << i)) {
-                write_int16(p->s.stats[i]);
-            }
-        }
-    }
+    if (p->bits & P_STATS) write_player_stats(p);
 }
 
 static unsigned extend_entity(const entity_t *e)
@@ -1310,3 +1531,90 @@ size_t write_bin(FILE *fp, node_t *nodes)
     return msglen;
 }
 
+static void write_svc_serverdata(serverdata_t *s)
+{
+    write_uint32(s->majorversion);
+    write_uint32(s->servercount);
+    write_uint8(s->attractloop);
+    write_string(s->gamedir);
+    write_int16(s->clientnum);
+    write_string(s->levelname);
+}
+
+static void write_svc_player(player_t *p)
+{
+    write_uint16(p->bits);
+    if (p->bits & PS_TYPE) write_uint8(p->s.pm_type);
+    if (p->bits & PS_ORIGIN) {
+        write_int16_v(p->s.origin_xy, 2);
+        write_int16(p->s.origin_z);
+    }
+    if (p->bits & PS_VELOCITY) write_int16_v(p->s.velocity, 3);
+    if (p->bits & PS_TIME) write_uint8(p->s.pm_time);
+    if (p->bits & PS_FLAGS) write_uint8(p->s.pm_flags);
+    if (p->bits & PS_GRAVITY) write_uint8(p->s.pm_gravity);
+    if (p->bits & PS_DELTA_ANGLES) write_int16_v(p->s.delta_angles, 3);
+    if (p->bits & PS_VIEWOFFSET) write_int8_v(p->s.viewoffset, 3);
+    if (p->bits & PS_VIEWANGLES) {
+        write_int16_v(p->s.viewangles_xy, 2);
+        write_int16(p->s.viewangle_z);
+    }
+    if (p->bits & PS_KICKANGLES) write_int8_v(p->s.kickangles, 3);
+    if (p->bits & PS_WEAPONINDEX) write_uint8(p->s.weaponindex);
+    if (p->bits & PS_WEAPONFRAME) {
+        write_uint8(p->s.weaponframe);
+        write_int8_v(p->s.gunoffset, 3);
+        write_int8_v(p->s.gunangles, 3);
+    }
+    if (p->bits & PS_BLEND) write_uint8_v(p->s.blend, 4);
+    if (p->bits & PS_FOV) write_uint8(p->s.fov);
+    if (p->bits & PS_RDFLAGS) write_uint8(p->s.rdflags);
+    if (p->statbits) write_player_stats(p);
+}
+
+static void write_svc_frame(frame_t *f)
+{
+    write_uint32(f->number);
+    write_uint32(f->delta);
+    write_uint8(f->suppressed);
+    write_blob((blob_t *)f->portalbits);
+    write_uint8(svc_playerinfo);
+    write_svc_player((player_t *)f->players);
+    write_uint8(svc_packetentities);
+    iter_list(f->entities, write_entity);
+}
+
+static void write_dm2_node(void *n)
+{
+    switch (((node_t *)n)->type) {
+    case NODE_SERVERDATA:
+        write_svc_serverdata(n);
+        break;
+    case NODE_FRAME:
+        write_svc_frame(n);
+        break;
+    case NODE_ENTITY:
+        write_uint8(svc_spawnbaseline);
+        write_entity(n);
+        break;
+    default:
+        write_svc(n);
+        break;
+    }
+}
+
+size_t write_dm2_bin(FILE *fp, node_t *nodes)
+{
+    uint32_t msglen;
+
+    msg.head = 0;
+    msg.tail = MAX_MSGLEN;
+    iter_list(nodes, write_dm2_node);
+
+    msglen = le32(msg.head);
+    write_raw(&msglen, sizeof(msglen), fp);
+
+    write_raw(msg.data, msglen, fp);
+
+    return msglen;
+}

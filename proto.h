@@ -105,6 +105,25 @@ typedef enum {
     P_REMOVE        = F(15)
 } player_bits_t;
 
+typedef enum {
+    PS_TYPE         = F(0),
+    PS_ORIGIN       = F(1),
+    PS_VELOCITY     = F(2),
+    PS_TIME         = F(3),
+    PS_FLAGS        = F(4),
+    PS_GRAVITY      = F(5),
+    PS_DELTA_ANGLES = F(6),
+    PS_VIEWOFFSET   = F(7),
+    PS_VIEWANGLES   = F(8),
+    PS_KICKANGLES   = F(9),
+    PS_BLEND        = F(10),
+    PS_FOV          = F(11),
+    PS_WEAPONINDEX  = F(12),
+    PS_WEAPONFRAME  = F(13),
+    PS_RDFLAGS      = F(14),
+    PS_RESERVED     = F(15)
+} player_svc_bits_t;
+
 //
 // entities
 //
