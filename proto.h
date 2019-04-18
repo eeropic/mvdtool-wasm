@@ -4,6 +4,7 @@
 #define MAX_STATS           32
 #define MAX_QPATH           64
 #define MAX_STRING_CHARS    1024
+#define MAX_NET_STRING      2048
 #define MAX_CONFIGSTRINGS   2080
 #define MAX_CLIENTS         256
 #define MAX_EDICTS          1024

@@ -11,8 +11,8 @@ static FILE *ifp, *ofp;
 //
 
 static struct {
-    char data[MAX_PACKETLEN * 5];
-    char token[MAX_PACKETLEN];
+    char data[MAX_NET_STRING * 4];
+    char token[MAX_NET_STRING];
     size_t len;
     char *ptr;
     int number;
@@ -34,6 +34,8 @@ static inline void addchar(int c)
 {
     if (line.len < sizeof(line.token) - 1) {
         line.token[line.len++] = c;
+    } else {
+        fatal("line %d: oversize token", line.number);
     }
 }
 
@@ -613,7 +615,7 @@ static node_t *parse_configstring(void)
 static node_t *parse_print(void)
 {
     string_t *s;
-    char buffer[MAX_PACKETLEN];
+    char buffer[MAX_NET_STRING];
     char *tok;
     size_t len = SIZE_MAX;
     unsigned level = UINT8_MAX + 1;
@@ -635,7 +637,7 @@ static node_t *parse_print(void)
     if (level == UINT8_MAX + 1) undefined("level");
     if (len == SIZE_MAX) undefined("string");
 
-    if (len >= MAX_PACKETLEN) {
+    if (len >= sizeof(buffer)) {
         fatal("line %d: oversize string", line.number);
     }
 
@@ -654,7 +656,7 @@ static node_t *parse_svc_string(unsigned type)
 
     parse();
 
-    if (line.len >= MAX_PACKETLEN) {
+    if (line.len >= MAX_NET_STRING) {
         fatal("line %d: oversize string", line.number);
     }
 
@@ -1092,7 +1094,7 @@ static void write_uint_v(const char *name, unsigned *v, size_t n)
 static void write_string(const char *name, const char *s)
 {
     static const char hex[] = "0123456789ABCDEF";
-    char buffer[MAX_STRING_CHARS * 4], *p;
+    char buffer[MAX_NET_STRING * 4], *p;
     int c;
 
     p = buffer;

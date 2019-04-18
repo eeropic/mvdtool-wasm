@@ -330,7 +330,7 @@ static node_t *parse_serverdata(unsigned bits)
 static string_t *_parse_string(unsigned type)
 {
     string_t *s;
-    char buffer[MAX_PACKETLEN]; // FIXME: should be MAX_STRING_CHARS
+    char buffer[MAX_NET_STRING];
     size_t len;
 
     len = read_string(buffer, sizeof(buffer));
