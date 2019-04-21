@@ -9,6 +9,7 @@
 #define MAX_CLIENTS         256
 #define MAX_EDICTS          1024
 
+#define PROTOCOL_VERSION_DEFAULT        34
 #define PROTOCOL_VERSION_MVD            37
 
 #define PROTOCOL_VERSION_MVD_MINIMUM    2009    // r168

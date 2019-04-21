@@ -286,12 +286,12 @@ static node_t *_parse_player(void)
             continue;
         }
         if (!strcmp(tok, "origin_xy")) {
-            parse_int16_v(p->s.origin_xy, 2);
+            parse_int16_v(p->s.origin, 2);
             p->bits |= P_ORIGIN;
             continue;
         }
         if (!strcmp(tok, "origin_z")) {
-            p->s.origin_z = parse_int16();
+            p->s.origin[2] = parse_int16();
             p->bits |= P_ORIGIN2;
             continue;
         }
@@ -301,12 +301,12 @@ static node_t *_parse_player(void)
             continue;
         }
         if (!strcmp(tok, "viewangles_xy")) {
-            parse_int16_v(p->s.viewangles_xy, 2);
+            parse_int16_v(p->s.viewangles, 2);
             p->bits |= P_VIEWANGLES;
             continue;
         }
         if (!strcmp(tok, "viewangle_z")) {
-            p->s.viewangle_z = parse_int16();
+            p->s.viewangles[2] = parse_int16();
             p->bits |= P_VIEWANGLE2;
             continue;
         }
@@ -1005,6 +1005,216 @@ static node_t *parse_message(void)
     unknown();
 }
 
+static node_t *parse_svc_serverdata(void)
+{
+    serverdata_t *s;
+    char *tok;
+
+    s = memset(alloc_node(NODE_SERVERDATA, sizeof(*s)), 0, sizeof(*s));
+    s->node.type = NODE_SERVERDATA;
+    s->clientnum = CLIENTNUM_NONE;
+
+    expect("{");
+    while (1) {
+        tok = parse();
+        if (!strcmp(tok, "majorversion")) {
+            s->majorversion = parse_uint32();
+            if (s->majorversion != PROTOCOL_VERSION_DEFAULT) {
+                fatal("unknown major protocol version");
+            }
+        } else if (!strcmp(tok, "servercount")) {
+            s->servercount = parse_uint32();
+        } else if (!strcmp(tok, "attractloop")) {
+            s->attractloop = parse_uint8();
+        } else if (!strcmp(tok, "gamedir")) {
+            parse_string(s->gamedir, MAX_QPATH);
+        } else if (!strcmp(tok, "clientnum")) {
+            s->clientnum = parse_int(-1, CLIENTNUM_NONE - 1);
+        } else if (!strcmp(tok, "levelname")) {
+            parse_string(s->levelname, sizeof(s->levelname));
+        } else if (!strcmp(tok, "}")) {
+            break;
+        } else {
+            unknown();
+        }
+    }
+
+    if (!s->majorversion) undefined("majorversion");
+    if (s->clientnum == CLIENTNUM_NONE) undefined("clientnum");
+
+    return NODE(s);
+}
+
+static node_t *parse_svc_player(void)
+{
+    player_t *p;
+    char *tok;
+
+    p = alloc_node(NODE_PLAYER, sizeof(*p));
+    p->number = CLIENTNUM_NONE;
+    p->bits = 0;
+    p->statbits = 0;
+
+    expect("{");
+    while (1) {
+        tok = parse();
+        if (!strcmp(tok, "pm_type")) {
+            p->s.pm_type = parse_uint8();
+            p->bits |= PS_TYPE;
+            continue;
+        }
+        if (!strcmp(tok, "origin")) {
+            parse_int16_v(p->s.origin, 3);
+            p->bits |= PS_ORIGIN;
+            continue;
+        }
+        if (!strcmp(tok, "velocity")) {
+            parse_int16_v(p->s.velocity, 3);
+            p->bits |= PS_VELOCITY;
+            continue;
+        }
+        if (!strcmp(tok, "pm_time")) {
+            p->s.pm_time = parse_uint8();
+            p->bits |= PS_TIME;
+            continue;
+        }
+        if (!strcmp(tok, "pm_flags")) {
+            p->s.pm_flags = parse_uint8();
+            p->bits |= PS_FLAGS;
+            continue;
+        }
+        if (!strcmp(tok, "pm_gravity")) {
+            p->s.pm_gravity = parse_int16();
+            p->bits |= PS_GRAVITY;
+            continue;
+        }
+        if (!strcmp(tok, "delta_angles")) {
+            parse_int16_v(p->s.delta_angles, 3);
+            p->bits |= PS_DELTA_ANGLES;
+            continue;
+        }
+        if (!strcmp(tok, "viewoffset")) {
+            parse_int8_v(p->s.viewoffset, 3);
+            p->bits |= PS_VIEWOFFSET;
+            continue;
+        }
+        if (!strcmp(tok, "viewangles")) {
+            parse_int16_v(p->s.viewangles, 3);
+            p->bits |= PS_VIEWANGLES;
+            continue;
+        }
+        if (!strcmp(tok, "kickangles")) {
+            parse_int8_v(p->s.kickangles, 3);
+            p->bits |= PS_KICKANGLES;
+            continue;
+        }
+        if (!strcmp(tok, "weaponindex")) {
+            p->s.weaponindex = parse_uint8();
+            p->bits |= PS_WEAPONINDEX;
+            continue;
+        }
+        if (!strcmp(tok, "weaponframe")) {
+            p->s.weaponframe = parse_uint8();
+            p->bits |= PS_WEAPONFRAME;
+            continue;
+        }
+        if (!strcmp(tok, "gunoffset")) {
+            parse_int8_v(p->s.gunoffset, 3);
+            p->bits |= PS_WEAPONFRAME;
+            continue;
+        }
+        if (!strcmp(tok, "gunangles")) {
+            parse_int8_v(p->s.gunangles, 3);
+            p->bits |= PS_WEAPONFRAME;
+            continue;
+        }
+        if (!strcmp(tok, "blend")) {
+            parse_uint8_v(p->s.blend, 4);
+            p->bits |= PS_BLEND;
+            continue;
+        }
+        if (!strcmp(tok, "fov")) {
+            p->s.fov = parse_uint8();
+            p->bits |= PS_FOV;
+            continue;
+        }
+        if (!strcmp(tok, "rdflags")) {
+            p->s.rdflags = parse_uint8();
+            p->bits |= PS_RDFLAGS;
+            continue;
+        }
+        if (!strcmp(tok, "stats")) {
+            p->statbits = parse_stats(p->s.stats);
+            continue;
+        }
+        if (!strcmp(tok, "}")) {
+            break;
+        }
+        unknown();
+    }
+
+    return NODE(p);
+}
+
+static node_t *parse_svc_frame(void)
+{
+    frame_t *f;
+    char *tok;
+
+    f = alloc_node(NODE_FRAME, sizeof(*f));
+    f->portalbits = NULL;
+    f->players = NULL;
+    f->entities = NULL;
+    f->suppressed = 0;
+
+    expect("{");
+    while (1) {
+        tok = parse();
+        if (!strcmp(tok, "number")) {
+            f->number = parse_int(0, INT32_MAX);
+        } else if (!strcmp(tok, "delta")) {
+            f->delta = parse_int(-1, INT32_MAX);
+        } else if (!strcmp(tok, "suppressed")) {
+            f->suppressed = parse_uint8();
+        } else if (!strcmp(tok, "portalbits")) {
+            f->portalbits = parse_blob();
+        } else if (!strcmp(tok, "playerstate")) {
+            f->players = parse_svc_player();
+        } else if (!strcmp(tok, "packetentities")) {
+            expect("{");
+            f->entities = build_list(parse_entity);
+        } else if (!strcmp(tok, "}")) {
+            break;
+        } else {
+            unknown();
+        }
+    }
+
+    return NODE(f);
+}
+
+static node_t *parse_dm2_message(void)
+{
+    char *tok;
+
+    tok = parse();
+    if (!strcmp(tok, "serverdata")) return parse_svc_serverdata();
+    if (!strcmp(tok, "frame")) return parse_svc_frame();
+    if (!strcmp(tok, "spawnbaseline")) return _parse_entity();
+    if (!strcmp(tok, "muzzleflash")) return parse_muzzleflash();
+    if (!strcmp(tok, "temp_entity")) return parse_tent();
+    if (!strcmp(tok, "layout")) return parse_svc_string(NODE_LAYOUT);
+    if (!strcmp(tok, "stufftext")) return parse_svc_string(NODE_STUFFTEXT);
+    if (!strcmp(tok, "centerprint")) return parse_svc_string(NODE_CENTERPRINT);
+    if (!strcmp(tok, "configstring")) return parse_configstring();
+    if (!strcmp(tok, "sound")) return parse_svc_sound();
+    if (!strcmp(tok, "print")) return parse_print();
+    if (!strcmp(tok, "nop")) return parse_nop();
+    if (!strcmp(tok, "}")) return NULL;
+
+    unknown();
+}
+
 node_t *read_txt(FILE *fp)
 {
     char *tok;
@@ -1175,11 +1385,11 @@ static void write_player(player_t *p)
     begin_block("player");
     write_int("number", p->number);
     if (p->bits & P_TYPE) write_int("pm_type", p->s.pm_type);
-    if (p->bits & P_ORIGIN) write_int_v("origin_xy", p->s.origin_xy, 2);
-    if (p->bits & P_ORIGIN2) write_int("origin_z", p->s.origin_z);
+    if (p->bits & P_ORIGIN) write_int_v("origin_xy", p->s.origin, 2);
+    if (p->bits & P_ORIGIN2) write_int("origin_z", p->s.origin[2]);
     if (p->bits & P_VIEWOFFSET) write_int_v("viewoffset", p->s.viewoffset, 3);
-    if (p->bits & P_VIEWANGLES) write_int_v("viewangles_xy", p->s.viewangles_xy, 2);
-    if (p->bits & P_VIEWANGLE2) write_int("viewangle_z", p->s.viewangle_z);
+    if (p->bits & P_VIEWANGLES) write_int_v("viewangles_xy", p->s.viewangles, 2);
+    if (p->bits & P_VIEWANGLE2) write_int("viewangle_z", p->s.viewangles[2]);
     if (p->bits & P_KICKANGLES) write_int_v("kickangles", p->s.kickangles, 3);
     if (p->bits & P_WEAPONINDEX) write_int("weaponindex", p->s.weaponindex);
     if (p->bits & P_WEAPONFRAME) write_int("weaponframe", p->s.weaponframe);
@@ -1193,9 +1403,9 @@ static void write_player(player_t *p)
     end_block();
 }
 
-static void write_entity(entity_t *e)
+static void _write_entity(const char *name, entity_t *e)
 {
-    begin_block("entity");
+    begin_block(name);
     write_int("number", e->number);
     if (e->bits & E_MODEL) write_int("modelindex", e->s.modelindex);
     if (e->bits & E_MODEL2) write_int("modelindex2", e->s.modelindex2);
@@ -1217,6 +1427,11 @@ static void write_entity(entity_t *e)
     if (e->bits & E_SOLID) write_int("solid", e->s.solid);
     if (e->bits & E_REMOVE) write_tok("remove");
     end_block();
+}
+
+static void write_entity(entity_t *e)
+{
+    _write_entity("entity", e);
 }
 
 static void write_frame(const char *name, frame_t *f)
@@ -1529,6 +1744,82 @@ static void write_node(void *n)
         break;
     default:
         fatal("bad node type");
+    }
+}
+
+static void write_svc_serverdata(serverdata_t *s)
+{
+    begin_block("serverdata");
+    write_int("majorversion", s->majorversion);
+    write_int("servercount", s->servercount);
+    write_int("attractloop", s->attractloop);
+    write_string("gamedir", s->gamedir);
+    write_int("clientnum", s->clientnum);
+    write_string("levelname", s->levelname);
+    end_block();
+}
+
+static void write_svc_player(player_t *p)
+{
+    begin_block("playerstate");
+    if (p->bits & PS_TYPE) write_int("pm_type", p->s.pm_type);
+    if (p->bits & PS_ORIGIN) write_int_v("origin", p->s.origin, 3);
+    if (p->bits & PS_VELOCITY) write_int_v("velocity", p->s.velocity, 3);
+    if (p->bits & PS_TIME) write_int("pm_time", p->s.pm_time);
+    if (p->bits & PS_FLAGS) write_int("pm_flags", p->s.pm_flags);
+    if (p->bits & PS_GRAVITY) write_int("pm_gravity", p->s.pm_gravity);
+    if (p->bits & PS_DELTA_ANGLES) write_int_v("delta_angles", p->s.delta_angles, 3);
+    if (p->bits & PS_VIEWOFFSET) write_int_v("viewoffset", p->s.viewoffset, 3);
+    if (p->bits & PS_VIEWANGLES) write_int_v("viewangles", p->s.viewangles, 3);
+    if (p->bits & PS_KICKANGLES) write_int_v("kickangles", p->s.kickangles, 3);
+    if (p->bits & PS_WEAPONINDEX) write_int("weaponindex", p->s.weaponindex);
+    if (p->bits & PS_WEAPONFRAME) {
+        write_int("weaponframe", p->s.weaponframe);
+        write_int_v("gunoffset", p->s.gunoffset, 3);
+        write_int_v("gunangles", p->s.gunangles, 3);
+    }
+    if (p->bits & PS_BLEND) write_uint_v("blend", p->s.blend, 4);
+    if (p->bits & PS_FOV) write_int("fov", p->s.fov);
+    if (p->bits & PS_RDFLAGS) write_int("rdflags", p->s.rdflags);
+    if (p->statbits) write_stats(p);
+    end_block();
+}
+
+static void write_svc_frame(frame_t *f)
+{
+    begin_block("frame");
+    write_int("number", f->number);
+    write_int("delta", f->delta);
+    if (f->suppressed) {
+        write_int("suppressed", f->suppressed);
+    }
+    write_blob("portalbits", (blob_t *)f->portalbits);
+    if (f->players) {
+        write_svc_player((player_t *)f->players);
+    }
+    if (f->entities) {
+        begin_block("packetentities");
+        iter_list(f->entities, write_entity);
+        end_block();
+    }
+    end_block();
+}
+
+static void write_dm2_node(void *n)
+{
+    switch (((node_t *)n)->type) {
+    case NODE_SERVERDATA:
+        write_svc_serverdata(n);
+        break;
+    case NODE_FRAME:
+        write_svc_frame(n);
+        break;
+    case NODE_ENTITY:
+        _write_entity("spawnbaseline", n);
+        break;
+    default:
+        write_svc(n);
+        break;
     }
 }
 

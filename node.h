@@ -24,11 +24,11 @@ typedef struct node_s {
 
 #define F_PLAYER \
     DF(1,P_TYPE,pm_type); \
-    DF(2,P_ORIGIN,origin_xy); \
-    DF(1,P_ORIGIN2,origin_z); \
+    DF(2,P_ORIGIN,origin); \
+    DF(1,P_ORIGIN2,origin[2]); \
     DF(3,P_VIEWOFFSET,viewoffset); \
-    DF(2,P_VIEWANGLES,viewangles_xy); \
-    DF(1,P_VIEWANGLE2,viewangle_z); \
+    DF(2,P_VIEWANGLES,viewangles); \
+    DF(1,P_VIEWANGLE2,viewangles[2]); \
     DF(3,P_KICKANGLES,kickangles); \
     DF(1,P_WEAPONINDEX,weaponindex); \
     DF(1,P_WEAPONFRAME,weaponframe); \
@@ -43,13 +43,11 @@ typedef struct {
     unsigned    pm_flags;
     unsigned    pm_time;
     int         pm_gravity;
-    int         origin_xy[2];
-    int         origin_z;
+    int         origin[3];
     int         velocity[3];
     int         delta_angles[3];
     int         viewoffset[3];
-    int         viewangles_xy[2];
-    int         viewangle_z;
+    int         viewangles[3];
     int         kickangles[3];
     unsigned    weaponindex;
     unsigned    weaponframe;

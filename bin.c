@@ -221,11 +221,11 @@ static node_t *parse_player(void)
     p->bits = bits;
 
     if (bits & P_TYPE) p->s.pm_type = read_uint8();
-    if (bits & P_ORIGIN) read_int16_v(p->s.origin_xy, 2);
-    if (bits & P_ORIGIN2) p->s.origin_z = read_int16();
+    if (bits & P_ORIGIN) read_int16_v(p->s.origin, 2);
+    if (bits & P_ORIGIN2) p->s.origin[2] = read_int16();
     if (bits & P_VIEWOFFSET) read_int8_v(p->s.viewoffset, 3);
-    if (bits & P_VIEWANGLES) read_int16_v(p->s.viewangles_xy, 2);
-    if (bits & P_VIEWANGLE2) p->s.viewangle_z = read_int16();
+    if (bits & P_VIEWANGLES) read_int16_v(p->s.viewangles, 2);
+    if (bits & P_VIEWANGLE2) p->s.viewangles[2] = read_int16();
     if (bits & P_KICKANGLES) read_int8_v(p->s.kickangles, 3);
     if (bits & P_WEAPONINDEX) p->s.weaponindex = read_uint8();
     if (bits & P_WEAPONFRAME) p->s.weaponframe = read_uint8();
@@ -733,6 +733,9 @@ static node_t *parse_svc_serverdata(void)
 
     s = alloc_node(NODE_SERVERDATA, sizeof(*s));
     s->majorversion = read_uint32();
+    if (s->majorversion != PROTOCOL_VERSION_DEFAULT) {
+        fatal("unknown major protocol version");
+    }
     s->servercount = read_uint32();
     s->attractloop = read_uint8();
     read_string(s->gamedir, sizeof(s->gamedir));
@@ -758,8 +761,7 @@ static node_t *parse_svc_player(void)
         p->s.pm_type = read_uint8();
     }
     if (bits & PS_ORIGIN) {
-        read_int16_v(p->s.origin_xy, 2);
-        p->s.origin_z = read_int16();
+        read_int16_v(p->s.origin, 3);
     }
     if (bits & PS_VELOCITY) {
         read_int16_v(p->s.velocity, 3);
@@ -780,8 +782,7 @@ static node_t *parse_svc_player(void)
         read_int8_v(p->s.viewoffset, 3);
     }
     if (bits & PS_VIEWANGLES) {
-        read_int16_v(p->s.viewangles_xy, 2);
-        p->s.viewangle_z = read_int16();
+        read_int16_v(p->s.viewangles, 3);
     }
     if (bits & PS_KICKANGLES) {
         read_int8_v(p->s.kickangles, 3);
@@ -1031,7 +1032,7 @@ static void write_string(const char *s)
     }
 }
 
-static void write_player_stats(player_t *p)
+static void write_stats(player_t *p)
 {
     int i;
 
@@ -1048,11 +1049,11 @@ static void write_player(player_t *p)
     write_uint8(p->number);
     write_uint16(p->bits);
     if (p->bits & P_TYPE) write_uint8(p->s.pm_type);
-    if (p->bits & P_ORIGIN) write_int16_v(p->s.origin_xy, 2);
-    if (p->bits & P_ORIGIN2) write_int16(p->s.origin_z);
+    if (p->bits & P_ORIGIN) write_int16_v(p->s.origin, 2);
+    if (p->bits & P_ORIGIN2) write_int16(p->s.origin[2]);
     if (p->bits & P_VIEWOFFSET) write_int8_v(p->s.viewoffset, 3);
-    if (p->bits & P_VIEWANGLES) write_int16_v(p->s.viewangles_xy, 2);
-    if (p->bits & P_VIEWANGLE2) write_int16(p->s.viewangle_z);
+    if (p->bits & P_VIEWANGLES) write_int16_v(p->s.viewangles, 2);
+    if (p->bits & P_VIEWANGLE2) write_int16(p->s.viewangles[2]);
     if (p->bits & P_KICKANGLES) write_int8_v(p->s.kickangles, 3);
     if (p->bits & P_WEAPONINDEX) write_uint8(p->s.weaponindex);
     if (p->bits & P_WEAPONFRAME) write_uint8(p->s.weaponframe);
@@ -1061,7 +1062,7 @@ static void write_player(player_t *p)
     if (p->bits & P_BLEND) write_uint8_v(p->s.blend, 4);
     if (p->bits & P_FOV) write_uint8(p->s.fov);
     if (p->bits & P_RDFLAGS) write_uint8(p->s.rdflags);
-    if (p->bits & P_STATS) write_player_stats(p);
+    if (p->bits & P_STATS) write_stats(p);
 }
 
 static unsigned extend_entity(const entity_t *e)
@@ -1533,6 +1534,7 @@ size_t write_bin(FILE *fp, node_t *nodes)
 
 static void write_svc_serverdata(serverdata_t *s)
 {
+    write_uint8(svc_serverdata);
     write_uint32(s->majorversion);
     write_uint32(s->servercount);
     write_uint8(s->attractloop);
@@ -1545,20 +1547,14 @@ static void write_svc_player(player_t *p)
 {
     write_uint16(p->bits);
     if (p->bits & PS_TYPE) write_uint8(p->s.pm_type);
-    if (p->bits & PS_ORIGIN) {
-        write_int16_v(p->s.origin_xy, 2);
-        write_int16(p->s.origin_z);
-    }
+    if (p->bits & PS_ORIGIN) write_int16_v(p->s.origin, 3);
     if (p->bits & PS_VELOCITY) write_int16_v(p->s.velocity, 3);
     if (p->bits & PS_TIME) write_uint8(p->s.pm_time);
     if (p->bits & PS_FLAGS) write_uint8(p->s.pm_flags);
-    if (p->bits & PS_GRAVITY) write_uint8(p->s.pm_gravity);
+    if (p->bits & PS_GRAVITY) write_int16(p->s.pm_gravity);
     if (p->bits & PS_DELTA_ANGLES) write_int16_v(p->s.delta_angles, 3);
     if (p->bits & PS_VIEWOFFSET) write_int8_v(p->s.viewoffset, 3);
-    if (p->bits & PS_VIEWANGLES) {
-        write_int16_v(p->s.viewangles_xy, 2);
-        write_int16(p->s.viewangle_z);
-    }
+    if (p->bits & PS_VIEWANGLES) write_int16_v(p->s.viewangles, 3);
     if (p->bits & PS_KICKANGLES) write_int8_v(p->s.kickangles, 3);
     if (p->bits & PS_WEAPONINDEX) write_uint8(p->s.weaponindex);
     if (p->bits & PS_WEAPONFRAME) {
@@ -1569,11 +1565,12 @@ static void write_svc_player(player_t *p)
     if (p->bits & PS_BLEND) write_uint8_v(p->s.blend, 4);
     if (p->bits & PS_FOV) write_uint8(p->s.fov);
     if (p->bits & PS_RDFLAGS) write_uint8(p->s.rdflags);
-    if (p->statbits) write_player_stats(p);
+    write_stats(p);
 }
 
 static void write_svc_frame(frame_t *f)
 {
+    write_uint8(svc_frame);
     write_uint32(f->number);
     write_uint32(f->delta);
     write_uint8(f->suppressed);
@@ -1582,6 +1579,7 @@ static void write_svc_frame(frame_t *f)
     write_svc_player((player_t *)f->players);
     write_uint8(svc_packetentities);
     iter_list(f->entities, write_entity);
+    write_uint16(0);
 }
 
 static void write_dm2_node(void *n)
