@@ -16,10 +16,10 @@ void read_raw_safe(void *buf, size_t len, FILE *fp);
 void write_raw(void *buf, size_t len, FILE *fp);
 bool parse_timespec(const char *s, unsigned *blocknum);
 
-int convert_main(void);
+int bin2txt_main(void);
+int txt2bin_main(void);
 int hash_main(void);
 int strings_main(void);
 int split_main(void);
 int cut_main(void);
-int index_main(void);
 int diff_main(void);

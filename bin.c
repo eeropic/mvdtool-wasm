@@ -942,10 +942,6 @@ node_t *read_bin_any(FILE *fp)
 // writing
 //
 
-#ifdef _DEBUG
-size_t trap_pos;
-#endif
-
 static void *get_space(size_t len)
 {
     void *p;
@@ -956,9 +952,6 @@ static void *get_space(size_t len)
 
     p = msg.data + msg.head;
     msg.head += len;
-#ifdef _DEBUG
-    if (msg.head >= trap_pos) fatal("trap");
-#endif
     return p;
 }
 

@@ -25,19 +25,6 @@ void read_raw(void *buf, size_t len, FILE *fp)
     }
 }
 
-#if 0
-void read_raw_safe(void *buf, size_t len, FILE *fp)
-{
-    if (fread(buf, 1, len, fp) != len) {
-        if (ferror(fp)) {
-            fprintf(stderr, "WARNING: error reading file\n");
-        }
-        return false;
-    }
-    return true;
-}
-#endif
-
 void write_raw(void *buf, size_t len, FILE *fp)
 {
     if (fwrite(buf, 1, len, fp) != len) {
@@ -94,13 +81,13 @@ static int help_main(void)
             "\n"
             "Mode     Description\n"
             "-------- ----------------------------------------------\n"
-            "convert  Convert MVDs between binary and text formats\n"
-            "hash     Compute SHA-1 hashes of MVD binary blocks\n"
-            "strings  Parse MVD and print messages and timestamps\n"
-            "split    Split MVD by timestamps into multiple files\n"
-            "cut      Seamlessy remove chosen parts of MVD recording\n"
-            "index    Build index file from MVD file\n"
-            "diff     Compare MVDs block-by-block\n"
+            "bin2txt  Convert demo from binary to text format\n"
+            "txt2bin  Convert demo from text to binary format\n"
+            "hash     Compute SHA-1 hashes of binary demo blocks\n"
+            "strings  Parse demo and print messages and timestamps\n"
+            "split    Split demo by timestamps into multiple files\n"
+            "cut      Seamlessy remove chosen parts of demo recording\n"
+            "diff     Compare demos block-by-block\n"
             "help     Show this message\n");
     return 0;
 }
@@ -117,8 +104,11 @@ int main(int argc, char **argv)
     cmd_argc = argc - 1;
     cmd_argv = argv + 1;
 
-    if (!strcmp(name, "convert")) {
-        return convert_main();
+    if (!strcmp(name, "bin2txt")) {
+        return bin2txt_main();
+    }
+    if (!strcmp(name, "txt2bin")) {
+        return txt2bin_main();
     }
     if (!strcmp(name, "hash")) {
         return hash_main();
@@ -132,9 +122,6 @@ int main(int argc, char **argv)
     if (!strcmp(name, "cut")) {
         return cut_main();
     }
-    if (!strcmp(name, "index")) {
-        return index_main();
-    }
     if (!strcmp(name, "diff")) {
         return diff_main();
     }
@@ -143,7 +130,7 @@ int main(int argc, char **argv)
     }
 
 usage:
-    fprintf(stderr, "Usage: %s <convert|hash|strings|split|cut|index|diff|help> [options]\n", argv[0]);
+    fprintf(stderr, "Usage: %s <bin2txt|txt2bin|hash|strings|split|cut|diff|help> [options]\n", argv[0]);
     return 1;
 }
 
