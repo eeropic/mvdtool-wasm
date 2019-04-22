@@ -549,10 +549,7 @@ static node_t *parse_frame(void)
     frame_t *f;
     char *tok;
 
-    f = alloc_node(NODE_FRAME, sizeof(*f));
-    f->portalbits = NULL;
-    f->players = NULL;
-    f->entities = NULL;
+    f = zalloc_node(NODE_FRAME, sizeof(*f));
 
     expect("{");
     while (1) {
@@ -672,12 +669,8 @@ static node_t *parse_sound(void)
     sound_t *s;
     char *tok;
 
-    s = alloc_node(NODE_SOUND, sizeof(*s));
+    s = zalloc_node(NODE_SOUND, sizeof(*s));
     s->index = UINT8_MAX + 1;
-    s->bits = 0;
-    s->flags = 0;
-    s->entity = 0;
-    s->channel = 0;
 
     expect("{");
     while (1) {
@@ -771,9 +764,7 @@ static node_t *parse_tent(void)
     tent_t *t;
     char *tok;
 
-    t = alloc_node(NODE_TEMP_ENTITY, sizeof(*t));
-    memset(t, 0, sizeof(*t));
-    t->node.type = NODE_TEMP_ENTITY;
+    t = zalloc_node(NODE_TEMP_ENTITY, sizeof(*t));
 
     expect("{");
     while (1) {
@@ -833,10 +824,7 @@ static node_t *parse_multicast(void)
     char *tok;
     node_t **next_p;
 
-    m = alloc_node(NODE_MULTICAST, sizeof(*m));
-    m->type = 0;
-    m->reliable = false;
-    m->data = NULL;
+    m = zalloc_node(NODE_MULTICAST, sizeof(*m));
 
     expect("{");
     while (1) {
@@ -871,10 +859,8 @@ static node_t *parse_unicast(void)
     char *tok;
     node_t **next_p;
 
-    u = alloc_node(NODE_UNICAST, sizeof(*u));
+    u = zalloc_node(NODE_UNICAST, sizeof(*u));
     u->clientnum = CLIENTNUM_NONE;
-    u->reliable = false;
-    u->data = NULL;
 
     expect("{");
     while (1) {
@@ -922,15 +908,9 @@ static node_t *parse_serverdata(void)
     game_state_t *g;
     char *tok;
 
-    g = alloc_node(NODE_GAMESTATE, sizeof(*g));
-    g->mvdflags = 0;
-    g->majorversion = 0;
-    g->minorversion = 0;
-    g->servercount = 0;
-    g->gamedir[0] = 0;
+    g = zalloc_node(NODE_GAMESTATE, sizeof(*g));
     g->clientnum = CLIENTNUM_NONE;
-    g->configstrings = NULL;
-    g->baseframe = NULL;
+
     expect("{");
     while (1) {
         tok = parse();
@@ -1010,8 +990,7 @@ static node_t *parse_svc_serverdata(void)
     serverdata_t *s;
     char *tok;
 
-    s = memset(alloc_node(NODE_SERVERDATA, sizeof(*s)), 0, sizeof(*s));
-    s->node.type = NODE_SERVERDATA;
+    s = zalloc_node(NODE_SERVERDATA, sizeof(*s));
     s->clientnum = CLIENTNUM_NONE;
 
     expect("{");
@@ -1050,10 +1029,8 @@ static node_t *parse_svc_player(void)
     player_t *p;
     char *tok;
 
-    p = alloc_node(NODE_PLAYER, sizeof(*p));
+    p = zalloc_node(NODE_PLAYER, sizeof(*p));
     p->number = CLIENTNUM_NONE;
-    p->bits = 0;
-    p->statbits = 0;
 
     expect("{");
     while (1) {
@@ -1161,11 +1138,7 @@ static node_t *parse_svc_frame(void)
     frame_t *f;
     char *tok;
 
-    f = alloc_node(NODE_FRAME, sizeof(*f));
-    f->portalbits = NULL;
-    f->players = NULL;
-    f->entities = NULL;
-    f->suppressed = 0;
+    f = zalloc_node(NODE_FRAME, sizeof(*f));
 
     expect("{");
     while (1) {

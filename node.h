@@ -212,6 +212,7 @@ typedef struct {
 #define NODE(x) &(x)->node
 
 void *alloc_node(unsigned type, size_t size);
+void *zalloc_node(unsigned type, size_t size);
 void free_node(void *n);
 void free_nodes(void *n);
 
@@ -220,5 +221,5 @@ node_t *build_list(build_func_t build);
 
 typedef void (*iter_func_t)(void *);
 void _iter_list(void *n, iter_func_t iter);
-#define iter_list(n, iter)  _iter_list(n, (iter_func_t)iter)
+#define iter_list(n, iter)  _iter_list(n, (iter_func_t)(iter))
 

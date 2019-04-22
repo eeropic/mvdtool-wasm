@@ -89,6 +89,19 @@ void *alloc_node(unsigned type, size_t size)
     return n;
 }
 
+void *zalloc_node(unsigned type, size_t size)
+{
+    node_t *n;
+
+    n = calloc(1, size);
+    if (!n) {
+        fatal("out of memory");
+    }
+
+    n->type = type;
+    return n;
+}
+
 node_t *build_list(build_func_t build)
 {
     node_t *ret, *n, **next_p;
