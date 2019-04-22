@@ -71,10 +71,9 @@ bad:
 int split_main(void)
 {
     split_point_t *sp;
-    uint32_t magic;
     node_t *n;
     bool got_gamestate;
-    FILE *ifp, *ofp;
+    demo_t *ifp, *ofp;
     unsigned blocknum;
     world_state_t world;
 
@@ -89,28 +88,11 @@ int split_main(void)
         return 1;
     }
 
-    if (!strcmp(cmd_argv[1], "-")) {
-        ifp = stdin;
-    } else {
-        ifp = fopen(cmd_argv[1], "rb");
-        if (!ifp) {
-            perror("fopen");
-            return 1;
-        }
-    }
-
-    read_raw(&magic, sizeof(magic), ifp);
-    if (magic != MVD_MAGIC) {
-        fatal("not a MVD2 file");
-    }
+    ifp = open_demo(strcmp(cmd_argv[1], "-") ? cmd_argv[1] : NULL, "rb");
 
     ofp = NULL;
     blocknum = 0;
-    while (!feof(ifp)) {
-        n = read_bin(ifp);
-        if (!n) {
-            break;
-        }
+    while ((n = read_demo(ifp))) {
         got_gamestate = update_world(&world, n);
         if (!blocknum && !got_gamestate) {
             fatal("no gamestate in the first block");
@@ -118,26 +100,20 @@ int split_main(void)
         if (blocknum == sp->start) {
             node_t *s;
 
-            ofp = fopen(sp->filename, "wb");
-            if (!ofp) {
-                perror("fopen");
-                return 1;
-            }
-            write_raw(&magic, sizeof(magic), ofp);
+            ofp = open_demo(sp->filename, "wb");
             if (!got_gamestate) {
                 s = world_delta(NULL, &world);
-                write_bin(ofp, s);
+                write_demo(ofp, s);
                 free_nodes(s);
             }
-            write_bin(ofp, n);
+            write_demo(ofp, n);
         } else if (blocknum > sp->start) {
-            write_bin(ofp, n);
+            write_demo(ofp, n);
         }
         free_nodes(n);
 
         if (blocknum == sp->end) {
-            write_bin(ofp, NULL);
-            fclose(ofp);
+            close_demo(ofp);
             ofp = NULL;
             sp = sp->next;
             if (!sp) {
@@ -147,12 +123,8 @@ int split_main(void)
 
         blocknum++;
     }
-    fclose(ifp);
-
-    if (ofp) {
-        write_bin(ofp, NULL);
-        fclose(ofp);
-    }
+    close_demo(ifp);
+    close_demo(ofp);
 
     return 0;
 }

@@ -92,10 +92,9 @@ static node_t *hijack_block(node_t *s, node_t *n)
 int cut_main(void)
 {
     cut_point_t *cp;
-    uint32_t magic;
     node_t *n, *s;
     bool got_gamestate;
-    FILE *ifp, *ofp;
+    demo_t *ifp, *ofp;
     unsigned blocknum;
     world_state_t world, old_world;
 
@@ -110,46 +109,19 @@ int cut_main(void)
         return 1;
     }
 
-    if (!strcmp(cmd_argv[1], "-")) {
-        ifp = stdin;
-    } else {
-        ifp = fopen(cmd_argv[1], "rb");
-        if (!ifp) {
-            perror("fopen");
-            return 1;
-        }
-    }
-    if (!strcmp(cmd_argv[2], "-")) {
-        ofp = stdout;
-    } else {
-        ofp = fopen(cmd_argv[2], "wb");
-        if (!ofp) {
-            perror("fopen");
-            return 1;
-        }
-    }
-
-    read_raw(&magic, sizeof(magic), ifp);
-    if (magic != MVD_MAGIC) {
-        fatal("not a MVD2 file");
-    }
-
-    write_raw(&magic, sizeof(magic), ofp);
+    ifp = open_demo(strcmp(cmd_argv[1], "-") ? cmd_argv[1] : NULL, "rb");
+    ofp = open_demo(strcmp(cmd_argv[2], "-") ? cmd_argv[2] : NULL, "wb");
 
     blocknum = 0;
     got_gamestate = false;
-    while (!feof(ifp)) {
-        n = read_bin(ifp);
-        if (!n) {
-            break;
-        }
+    while ((n = read_demo(ifp))) {
         got_gamestate |= update_world(&world, n);
         if (!blocknum && !got_gamestate) {
             fatal("no gamestate in the first block");
         }
         if (cp) {
             if (blocknum < cp->start) {
-                write_bin(ofp, n);
+                write_demo(ofp, n);
                 got_gamestate = false;
             } else if (blocknum == cp->start) {
                 old_world = world;
@@ -158,7 +130,7 @@ int cut_main(void)
                     // if we got level change in between, write gamestate first,
                     // then entire current frame
                     s = world_delta(NULL, &world);
-                    write_bin(ofp, s);
+                    write_demo(ofp, s);
                     free_nodes(s);
                     got_gamestate = false;
                 } else {
@@ -167,20 +139,18 @@ int cut_main(void)
                     s = world_delta(&old_world, &world);
                     n = hijack_block(s, n);
                 }
-                write_bin(ofp, n);
+                write_demo(ofp, n);
                 cp = cp->next;
             }
         } else {
-            write_bin(ofp, n);
+            write_demo(ofp, n);
         }
         free_nodes(n);
 
         blocknum++;
     }
-    fclose(ifp);
-
-    write_bin(ofp, NULL);
-    fclose(ofp);
+    close_demo(ifp);
+    close_demo(ofp);
 
     return 0;
 }

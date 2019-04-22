@@ -967,7 +967,7 @@ static node_t *parse_mvd_sound(void)
     return NODE(s);
 }
 
-static node_t *parse_message(void)
+static node_t *parse_mvd_message(void)
 {
     char *tok;
 
@@ -1188,21 +1188,29 @@ static node_t *parse_dm2_message(void)
     unknown();
 }
 
-node_t *read_txt(FILE *fp)
+node_t *read_txt(demo_t *demo)
 {
     char *tok;
 
-    ifp = fp;
+    ifp = demo->fp;
     tok = parse();
-    if (!strcmp(tok, "EOF")) {
+    if (!demo->blocknum) {
+        if (!strcmp(tok, "dm2")) {
+            demo->mode |= MODE_DM2;
+        } else if (strcmp(tok, "mvd2")) {
+            fatal("unknown file format");
+        }
+        expect("{");
+        tok = parse();
+    }
+    if (!strcmp(tok, "}")) {
         return NULL;
     }
     if (strcmp(tok, "block")) {
-        fatal("line %d: expected block, but got %s",
-              line.number, tok);
+        fatal("line %d: expected block, but got %s", line.number, tok);
     }
     expect("{");
-    return build_list(parse_message);
+    return build_list((demo->mode & MODE_DM2) ? parse_dm2_message : parse_mvd_message);
 }
 
 //
@@ -1216,10 +1224,10 @@ static struct {
 
 static char *make_indent(void)
 {
-    static char indent[16];
+    static char indent[32];
 
-    memset(indent, ' ', block.indent);
-    indent[block.indent] = 0;
+    memset(indent, ' ', block.indent*2);
+    indent[block.indent*2] = 0;
 
     return indent;
 }
@@ -1688,7 +1696,7 @@ static void write_mvd_sound(sound_t *s)
     end_block();
 }
 
-static void write_node(void *n)
+static void write_mvd_node(void *n)
 {
     switch (((node_t *)n)->type) {
     case NODE_GAMESTATE:
@@ -1796,18 +1804,19 @@ static void write_dm2_node(void *n)
     }
 }
 
-void write_txt(FILE *fp, node_t *nodes, unsigned blocknum)
+size_t write_txt(demo_t *demo, node_t *nodes)
 {
-    ofp = fp;
-
-    if (!nodes) {
-        fprintf(ofp, "\nEOF\n");
-        return;
-    }
-
+    ofp = demo->fp;
+    if (demo->blocknum)
+        fprintf(ofp, "\n");
+    else if (demo->mode & MODE_DM2)
+        fprintf(ofp, "dm2 {\n");
+    else
+        fprintf(ofp, "mvd2 {\n");
     block.indent = 1;
-    fprintf(ofp, "\nblock { // %u\n", blocknum);
-    iter_list(nodes, write_node);
+    fprintf(ofp, "%sblock { // %u\n", make_indent(), demo->blocknum);
+    block.indent++;
+    iter_list(nodes, (demo->mode & MODE_DM2) ? write_dm2_node : write_mvd_node);
     end_block();
+    return 0;
 }
-

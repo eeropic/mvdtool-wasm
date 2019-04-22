@@ -8,47 +8,21 @@
 
 int diff_main(void)
 {
-    uint32_t magic;
     unsigned blocknum;
     uint8_t buf[MAX_MSGLEN], *data;
     size_t msglen1, msglen2;
     size_t i;
-
-    FILE *ifp1, *ifp2;
-    FILE *ofp = stdout;
+    demo_t *ifp1, *ifp2;
 
     if (cmd_argc < 3) {
         return 1;
     }
-    ifp1 = fopen(cmd_argv[1], "rb");
-    if (!ifp1) {
-        perror("fopen");
-        return 1;
-    }
-    ifp2 = fopen(cmd_argv[2], "rb");
-    if (!ifp2) {
-        perror("fopen");
-        return 1;
-    }
-    if (cmd_argc > 3) {
-        ofp = fopen(cmd_argv[3], "w");
-        if (!ofp) {
-            perror("fopen");
-            return 1;
-        }
-    }
 
-    read_raw(&magic, sizeof(magic), ifp1);
-    if (magic != MVD_MAGIC) {
-        fatal("not a MVD2 file");
-    }
-    read_raw(&magic, sizeof(magic), ifp2);
-    if (magic != MVD_MAGIC) {
-        fatal("not a MVD2 file");
-    }
+    ifp1 = open_demo(cmd_argv[1], "rb");
+    ifp2 = open_demo(cmd_argv[2], "rb");
 
     blocknum = 0;
-    while (!feof(ifp1)) {
+    while (1) {
         data = load_bin(ifp1, &msglen1);
         if (!data) {
             data = load_bin(ifp2, &msglen2);
@@ -78,10 +52,9 @@ int diff_main(void)
                 break;
             }
         }
-        blocknum++;
 
+        ifp1->blocknum = ifp2->blocknum = blocknum++;
     }
 
     return 0;
 }
-

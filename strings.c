@@ -6,7 +6,7 @@
 #include "option.h"
 #include "lib.h"
 
-static FILE *ifp, *ofp;
+static demo_t *ifp;
 
 static unsigned blocknum, clientnum;
 static int what = -1;
@@ -60,7 +60,7 @@ static void print(const char *s)
     *p = 0;
 
     len = p - text;
-    fwrite(text, len, 1, ofp);
+    fwrite(text, len, 1, stdout);
 }
 
 static void parse_gamestate(game_state_t *g)
@@ -157,34 +157,16 @@ static void parse_message(void *n)
 
 int strings_main(void)
 {
-    ifp = stdin;
-    ofp = stdout;
+    node_t *n;
 
-    if (cmd_argc > 1) {
-        ifp = fopen(cmd_argv[1], "rb");
-        if (!ifp) {
-            perror("fopen");
-            return 1;
-        }
-        if (cmd_argc > 2) {
-            ofp = fopen(cmd_argv[2], "w");
-            if (!ofp) {
-                perror("fopen");
-                return 1;
-            }
-        }
-    }
+    ifp = open_demo(cmd_argc > 1 ? cmd_argv[1] : NULL, "rb");
 
-    while (!feof(ifp)) {
-        void *n = read_bin_any(ifp);
-        if (!n) {
-            break;
-        }
+    while ((n = read_demo(ifp))) {
         parse_message(n);
         free_nodes(n);
         blocknum++;
     }
+    close_demo(ifp);
 
     return 0;
 }
-

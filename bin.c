@@ -9,7 +9,7 @@ static struct {
     size_t head, tail;
 } msg;
 
-unsigned mask_hack;
+static unsigned mask_hack;
 
 //
 // reading
@@ -640,7 +640,7 @@ static node_t *parse_mvd_sound(unsigned bits)
     return NODE(s);
 }
 
-static node_t *_parse_message(void)
+static node_t *parse_mvd_message(void)
 {
     unsigned cmd, bits;
     node_t *n;
@@ -688,43 +688,6 @@ static node_t *_parse_message(void)
     }
 
     return n;
-}
-
-static node_t *parse_message(void)
-{
-    return build_list(_parse_message);
-}
-
-uint8_t *load_bin(FILE *fp, size_t *size_p)
-{
-    uint16_t msglen;
-
-    read_raw(&msglen, sizeof(msglen), fp);
-    if (!msglen) {
-        return NULL;
-    }
-    msglen = le16(msglen);
-    if (msglen > MAX_MSGLEN) {
-        fatal("msglen > MAX_MSGLEN");
-    }
-    read_raw(msg.data, msglen, fp);
-    msg.head = 0;
-    msg.tail = msglen;
-
-    if (size_p) {
-        *size_p = msglen;
-    }
-    return msg.data;
-}
-
-node_t *read_bin(FILE *fp)
-{
-    return load_bin(fp, NULL) ? parse_message() : NULL;
-}
-
-node_t *read_bin_size(FILE *fp, size_t *size_p)
-{
-    return load_bin(fp, size_p) ? parse_message() : NULL;
 }
 
 static node_t *parse_svc_serverdata(void)
@@ -837,7 +800,7 @@ static node_t *parse_svc_frame(void)
     return NODE(f);
 }
 
-static node_t *_parse_svc_message(void)
+static node_t *parse_dm2_message(void)
 {
     unsigned cmd;
     node_t *n;
@@ -867,76 +830,77 @@ static node_t *_parse_svc_message(void)
     return n;
 }
 
-static node_t *parse_svc_message(void)
+uint8_t *load_bin(demo_t *demo, size_t *size_p)
 {
-    return build_list(_parse_svc_message);
-}
+    size_t msglen;
 
-uint8_t *load_dm2_bin(FILE *fp, size_t *size_p)
-{
-    uint32_t msglen;
+    if (!demo->blocknum) {
+        uint32_t magic;
 
-    read_raw(&msglen, sizeof(msglen), fp);
-    if (!msglen) {
-        return NULL;
+        read_raw(&magic, sizeof(magic), demo->fp);
+        if (magic != MVD_MAGIC) {
+            static const uint8_t dm2_header[5] = { 0x0C, 0x22 };
+
+            msglen = le32(magic);
+            if (msglen < 14 || msglen > MAX_MSGLEN) {
+                fatal("unknown file format");
+            }
+            read_raw(msg.data, msglen, demo->fp);
+            if (memcmp(msg.data, dm2_header, sizeof(dm2_header))) {
+                fatal("unknown file format");
+            }
+            demo->mode |= MODE_DM2;
+            goto done;
+        }
     }
-    if (msglen == (uint32_t)-1) {
-        return NULL;
+
+    if (demo->mode & MODE_DM2) {
+        uint32_t v;
+
+        read_raw(&v, sizeof(v), demo->fp);
+        if (v == (uint32_t)-1) {
+            return NULL;
+        }
+        msglen = le32(v);
+    } else {
+        uint16_t v;
+
+        read_raw(&v, sizeof(v), demo->fp);
+        if (!v) {
+            return NULL;
+        }
+        msglen = le16(v);
     }
-    msglen = le32(msglen);
+
     if (msglen > MAX_MSGLEN) {
         fatal("msglen > MAX_MSGLEN");
     }
-    read_raw(msg.data, msglen, fp);
+
+    read_raw(msg.data, msglen, demo->fp);
+done:
     msg.head = 0;
     msg.tail = msglen;
 
     if (size_p) {
         *size_p = msglen;
     }
+
     return msg.data;
 }
 
-node_t *read_dm2_bin(FILE *fp)
+node_t *read_bin(demo_t *demo)
 {
-    return load_dm2_bin(fp, NULL) ? parse_svc_message() : NULL;
-}
-
-node_t *read_bin_any(FILE *fp)
-{
-    static int format;
-
-    if (!format) {
-        uint32_t magic, msglen;
-
-        read_raw(&magic, sizeof(magic), fp);
-        if (magic == MVD_MAGIC) {
-            format = 1;
-            return read_bin(fp);
+    if (load_bin(demo, NULL)) {
+        if (demo->mode & MODE_DM2) {
+            return build_list(parse_dm2_message);
+        } else {
+            return build_list(parse_mvd_message);
         }
-
-        msglen = le32(magic);
-        if (msglen < 14 || msglen > MAX_MSGLEN) {
-            fatal("unknown file format");
-        }
-
-        read_raw(msg.data, msglen, fp);
-        if (memcmp(msg.data, (const uint8_t [5]){ 0x0C, 0x22 }, 5)) {
-            fatal("unknown file format");
-        }
-
-        msg.head = 0;
-        msg.tail = msglen;
-
-        format = 2;
-        return parse_svc_message();
+    } else {
+        return NULL;
     }
-
-    if (format == 1)
-        return read_bin(fp);
-
-    return read_dm2_bin(fp);
 }
+
 
 //
 // writing
@@ -1477,7 +1441,7 @@ static void write_mvd_sound(sound_t *s)
     write_uint16((s->entity << 3) | s->channel);
 }
 
-static void write_node(void *n)
+static void write_mvd_node(void *n)
 {
     switch (((node_t *)n)->type) {
     case NODE_GAMESTATE:
@@ -1507,22 +1471,6 @@ static void write_node(void *n)
     default:
         fatal("bad node type");
     }
-}
-
-size_t write_bin(FILE *fp, node_t *nodes)
-{
-    uint16_t msglen;
-
-    msg.head = 0;
-    msg.tail = MAX_MSGLEN;
-    iter_list(nodes, write_node);
-
-    msglen = le16(msg.head);
-    write_raw(&msglen, sizeof(msglen), fp);
-
-    write_raw(msg.data, msglen, fp);
-
-    return msglen;
 }
 
 static void write_svc_serverdata(serverdata_t *s)
@@ -1594,18 +1542,31 @@ static void write_dm2_node(void *n)
     }
 }
 
-size_t write_dm2_bin(FILE *fp, node_t *nodes)
+size_t write_bin(demo_t *demo, node_t *nodes)
 {
-    uint32_t msglen;
-
     msg.head = 0;
     msg.tail = MAX_MSGLEN;
-    iter_list(nodes, write_dm2_node);
 
-    msglen = le32(msg.head);
-    write_raw(&msglen, sizeof(msglen), fp);
+    if (demo->mode & MODE_DM2) {
+        mask_hack = 0x8000;
+        iter_list(nodes, write_dm2_node);
 
-    write_raw(msg.data, msglen, fp);
+        uint32_t v = le32(msg.head);
+        write_raw(&v, sizeof(v), demo->fp);
+    } else {
+        mask_hack = 0;
+        iter_list(nodes, write_mvd_node);
 
-    return msglen;
+        if (!demo->blocknum) {
+            uint32_t v = MVD_MAGIC;
+            write_raw(&v, sizeof(v), demo->fp);
+        }
+
+        uint16_t v = le16(msg.head);
+        write_raw(&v, sizeof(v), demo->fp);
+    }
+
+    write_raw(msg.data, msg.head, demo->fp);
+
+    return msg.head;
 }

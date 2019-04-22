@@ -1,4 +1,8 @@
 #include "main.h"
+#include "proto.h"
+#include "node.h"
+#include "bin.h"
+#include "txt.h"
 #include "option.h"
 
 void fatal(const char *fmt, ...)
@@ -30,6 +34,86 @@ void write_raw(void *buf, size_t len, FILE *fp)
     if (fwrite(buf, 1, len, fp) != len) {
         fatal("failed to write file");
     }
+}
+
+demo_t *open_demo(const char *path, const char *mode)
+{
+    demo_t *demo;
+    FILE *fp;
+
+    if (path) {
+        fp = fopen(path, mode);
+        if (!fp)
+            fatal("couldn't open %s: %s", path, strerror(errno));
+    } else if (*mode == 'r') {
+        fp = stdin;
+    } else if (*mode == 'w') {
+        fp = stdout;
+    } else {
+        fatal("bad mode");
+    }
+
+    demo = calloc(1, sizeof(*demo));
+    if (*mode == 'w')
+        demo->mode |= MODE_WRITE;
+    if (mode[1] != 'b')
+        demo->mode |= MODE_TXT;
+    demo->fp = fp;
+    if (path)
+        demo->path = strdup(path);
+    return demo;
+}
+
+void close_demo(demo_t *demo)
+{
+    if (!demo)
+        return;
+
+    if ((demo->mode & MODE_WRITE) && demo->blocknum) {
+        if (demo->mode & MODE_TXT) {
+            write_raw("}\n", 2, demo->fp);
+        } else if (demo->mode & MODE_DM2) {
+            uint32_t v = -1;
+            write_raw(&v, sizeof(v), demo->fp);
+        } else {
+            uint16_t v = 0;
+            write_raw(&v, sizeof(v), demo->fp);
+        }
+    }
+
+    if (demo->path && fclose(demo->fp))
+        fatal("failed to write file");
+
+    free(demo->path);
+    free(demo);
+}
+
+node_t *read_demo(demo_t *demo)
+{
+    node_t *n = NULL;
+
+    if (!(demo->mode & MODE_EOF)) {
+        n = (demo->mode & MODE_TXT) ? read_txt(demo) : read_bin(demo);
+        if (!n)
+            demo->mode |= MODE_EOF;
+        else
+            demo->blocknum++;
+    }
+    return n;
+}
+
+size_t write_demo(demo_t *demo, node_t *n)
+{
+    if (!demo->blocknum) {
+        if (n->type == NODE_SERVERDATA)
+            demo->mode |= MODE_DM2;
+        else if (n->type != NODE_GAMESTATE)
+            fatal("first node isn't serverdata");
+    }
+
+    size_t r = (demo->mode & MODE_TXT) ? write_txt(demo, n) : write_bin(demo, n);
+    demo->blocknum++;
+    return r;
 }
 
 // 12345
