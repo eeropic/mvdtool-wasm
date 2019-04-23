@@ -4,136 +4,93 @@
 #include "world.h"
 #include "lib.h"
 
-static unsigned counter;
 static world_state_t *ow, *cw;
 
 //
 // delta writing
 //
 
-static player_t *_build_player(const player_state_t *f, const player_state_t *t)
+#define DF(k,b,x) if(CMP##k(cur->s.x,from->x)) bits|=b
+
+static node_t *build_players(void)
 {
     static const player_state_t null;
-    unsigned bits, statbits;
-    player_t *d;
-    int i;
+    node_t *ret, **next_p = &ret;
 
-    if (!f) f = &null;
-
-    bits = 0;
-#define DF(k,b,x) if(CMP##k(t->x,f->x)) bits|=b
-    F_PLAYER
-
-    statbits = 0;
-    for (i = 0; i < MAX_STATS; i++) {
-        if (t->stats[i] != f->stats[i]) {
-            statbits |= 1U << i;
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        world_player_t *cur = &cw->players[i];
+        if (!cur->active) {
+            continue;
         }
-    }
-    if (statbits) {
-        bits |= P_STATS;
-    }
 
-    if (!bits) {
-        return NULL; // nothing to emit
+        world_player_t *old = ow ? &ow->players[i] : NULL;
+        const player_state_t *from = old ? &old->s : &null;
+        unsigned bits = 0, statbits = 0;
+
+        F_PLAYER
+
+        for (int j = 0; j < MAX_STATS; j++) {
+            if (cur->s.stats[j] != from->stats[j]) {
+                statbits |= 1U << j;
+            }
+        }
+        if (statbits) {
+            bits |= P_STATS;
+        }
+
+        if (!bits && old && !old->remove && !cur->remove) {
+            continue;   // nothing to emit
+        }
+
+        player_t *p = alloc_node(NODE_PLAYER, sizeof(*p));
+        p->bits = bits | cur->remove;
+        p->number = i;
+        p->statbits = statbits;
+        p->s = cur->s;
+
+        *next_p = &p->node;
+        next_p = &p->node.next;
     }
+    *next_p = NULL;
 
-    d = alloc_node(NODE_PLAYER, sizeof(*d));
-    d->bits = bits;
-    d->statbits = statbits;
-    d->s = *t;
-
-    return d;
+    return ret;
 }
 
-static entity_t *_build_entity(const entity_state_t *f, const entity_state_t *t)
+static node_t *build_entities(void)
 {
     static const entity_state_t null;
-    unsigned bits;
-    entity_t *d;
+    node_t *ret, **next_p = &ret;
 
-    if (!f) f = &null;
+    for (int i = 1; i < MAX_EDICTS; i++) {
+        world_entity_t *cur = &cw->entities[i];
+        if (!cur->active) {
+            continue;
+        }
 
-    bits = 0;
-    F_ENTITY
+        world_entity_t *old = ow ? &ow->entities[i] : NULL;
+        const entity_state_t *from = old ? &old->s : &null;
+        unsigned bits = 0;
+
+        F_ENTITY
+
+        if (!bits && old && !old->remove && !cur->remove) {
+            continue;   // nothing to emit
+        }
+
+        entity_t *e = alloc_node(NODE_ENTITY, sizeof(*e));
+        e->bits = bits | cur->remove;
+        e->number = i;
+        e->s = cur->s;
+
+        *next_p = &e->node;
+        next_p = &e->node.next;
+    }
+    *next_p = NULL;
+
+    return ret;
+}
+
 #undef DF
-
-    if (!bits) {
-        return NULL; // nothing to emit
-    }
-
-    d = alloc_node(NODE_ENTITY, sizeof(*d));
-    d->bits = bits;
-    d->s = *t;
-
-    return d;
-}
-
-static player_t *build_player(world_player_t *cur)
-{
-    world_player_t *old = ow ? &ow->players[counter] : NULL;
-    player_t *p = _build_player(old ? &old->s : NULL, &cur->s);
-
-    if (!p) {
-        if (old && !old->remove && !cur->remove) {
-            return NULL;
-        }
-        p = alloc_node(NODE_PLAYER, sizeof(*p));
-        p->bits = 0;
-    }
-
-    p->bits |= cur->remove;
-    p->number = counter;
-    return p;
-}
-
-static node_t *build_next_player(void)
-{
-    for (; counter < MAX_CLIENTS; counter++) {
-        world_player_t *cur = &cw->players[counter];
-        if (cur->active) {
-            player_t *p = build_player(cur);
-            if (p) {
-                counter++;
-                return NODE(p);
-            }
-        }
-    }
-    return NULL;
-}
-
-static entity_t *build_entity(world_entity_t *cur)
-{
-    world_entity_t *old = ow ? &ow->entities[counter] : NULL;
-    entity_t *e = _build_entity(old ? &old->s : NULL, &cur->s);
-
-    if (!e) {
-        if (old && !old->remove && !cur->remove) {
-            return NULL;
-        }
-        e = alloc_node(NODE_ENTITY, sizeof(*e));
-        e->bits = 0;
-    }
-
-    e->bits |= cur->remove;
-    e->number = counter;
-    return e;
-}
-
-static node_t *build_next_entity(void)
-{
-    for (; counter < MAX_EDICTS; counter++) {
-        world_entity_t *cur = &cw->entities[counter];
-        if (cur->active) {
-            entity_t *e = build_entity(cur);
-            if (e) {
-                counter++;
-                return NODE(e);
-            }
-        }
-    }
-    return NULL;
-}
 
 static node_t *build_blob(void *data, size_t len)
 {
@@ -156,10 +113,8 @@ static node_t *build_frame(void)
 
     f = alloc_node(NODE_FRAME, sizeof(*f));
     f->portalbits = build_blob(cw->portalbits, cw->portalbytes);
-    counter = 0;
-    f->players = build_list(build_next_player);
-    counter = 1;
-    f->entities = build_list(build_next_entity);
+    f->players = build_players();
+    f->entities = build_entities();
 
     return NODE(f);
 }
@@ -180,13 +135,10 @@ static node_t *build_configstring(unsigned index, const char *c)
 
 static node_t *build_configstrings(void)
 {
-    node_t *n, *ret, **next_p;
-    char *c;
-    int i;
+    node_t *n, *ret, **next_p = &ret;
 
-    next_p = &ret;
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
-        c = cw->configstrings[i];
+    for (int i = 0; i < MAX_CONFIGSTRINGS; i++) {
+        char *c = cw->configstrings[i];
         if (ow) {
             if (!strcmp(c, ow->configstrings[i])) {
                 continue;
@@ -244,34 +196,22 @@ node_t *world_delta(world_state_t *from, world_state_t *to)
 // delta parsing
 //
 
-static void update_player(player_state_t *s, const player_t *d)
-{
-    int i;
-
-#define DF(k,b,x) if(d->bits&b) CPY##k(s->x,d->s.x)
-    F_PLAYER
-
-    if (d->bits & P_STATS) {
-        for (i = 0; i < MAX_STATS; i++) {
-            if (d->statbits & (1U << i)) {
-                s->stats[i] = d->s.stats[i];
-            }
-        }
-    }
-}
-
-static void update_entity(entity_state_t *s, const entity_t *d)
-{
-    F_ENTITY
-#undef DF
-}
-
-
 static void parse_player(player_t *p)
 {
     world_player_t *w = &cw->players[p->number];
 
-    update_player(&w->s, p);
+#define DF(k,b,x) if(p->bits&b) CPY##k(w->s.x,p->s.x)
+    F_PLAYER
+#undef DF
+
+    if (p->bits & P_STATS) {
+        for (int i = 0; i < MAX_STATS; i++) {
+            if (p->statbits & (1U << i)) {
+                w->s.stats[i] = p->s.stats[i];
+            }
+        }
+    }
+
     w->remove = p->bits & P_REMOVE;
     w->active = true;
 }
@@ -280,24 +220,25 @@ static void parse_entity(entity_t *e)
 {
     world_entity_t *w = &cw->entities[e->number];
 
-    update_entity(&w->s, e);
+#define DF(k,b,x) if(e->bits&b) CPY##k(w->s.x,e->s.x)
+    F_ENTITY
+#undef DF
+
     w->remove = e->bits & E_REMOVE;
     w->active = true;
 }
 
-static void parse_portalbits(blob_t *b)
+static void parse_frame(frame_t *f)
 {
+    blob_t *b = (blob_t *)f->portalbits;
+
     if (b) {
         memcpy(cw->portalbits, b->data, b->len);
         cw->portalbytes = b->len;
     } else {
         cw->portalbytes = 0;
     }
-}
 
-static void parse_frame(frame_t *f)
-{
-    parse_portalbits((blob_t *)f->portalbits);
     iter_list(f->players, parse_player);
     iter_list(f->entities, parse_entity);
 }
