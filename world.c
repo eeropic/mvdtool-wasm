@@ -38,7 +38,7 @@ static node_t *build_players(void)
             bits |= P_STATS;
         }
 
-        if (!bits && old && !old->remove && !cur->remove) {
+        if (!bits && (old && !old->remove) == !cur->remove) {
             continue;   // nothing to emit
         }
 
@@ -73,7 +73,7 @@ static node_t *build_entities(void)
 
         F_ENTITY
 
-        if (!bits && old && !old->remove && !cur->remove) {
+        if (!bits && (old && !old->remove) == !cur->remove) {
             continue;   // nothing to emit
         }
 
