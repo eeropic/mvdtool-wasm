@@ -991,7 +991,7 @@ static node_t *parse_svc_serverdata(void)
     char *tok;
 
     s = zalloc_node(NODE_SERVERDATA, sizeof(*s));
-    s->clientnum = CLIENTNUM_NONE;
+    s->clientnum = MAX_EDICTS;
 
     expect("{");
     while (1) {
@@ -1008,7 +1008,7 @@ static node_t *parse_svc_serverdata(void)
         } else if (!strcmp(tok, "gamedir")) {
             parse_string(s->gamedir, MAX_QPATH);
         } else if (!strcmp(tok, "clientnum")) {
-            s->clientnum = parse_int(-1, CLIENTNUM_NONE - 1);
+            s->clientnum = parse_int(-1, MAX_EDICTS - 1);
         } else if (!strcmp(tok, "levelname")) {
             parse_string(s->levelname, sizeof(s->levelname));
         } else if (!strcmp(tok, "}")) {
@@ -1019,7 +1019,7 @@ static node_t *parse_svc_serverdata(void)
     }
 
     if (!s->majorversion) undefined("majorversion");
-    if (s->clientnum == CLIENTNUM_NONE) undefined("clientnum");
+    if (s->clientnum == MAX_EDICTS) undefined("clientnum");
 
     return NODE(s);
 }
