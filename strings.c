@@ -93,6 +93,12 @@ static void parse_print(string_t *s)
     }
 }
 
+static void parse_centerprint(string_t *s)
+{
+    print(s->data);
+    print("\n");
+}
+
 static void parse_unicast(unicast_t *u)
 {
     void *n;
@@ -105,6 +111,9 @@ static void parse_unicast(unicast_t *u)
         switch (((node_t *)n)->type) {
         case NODE_PRINT:
             parse_print(n);
+            break;
+        case NODE_CENTERPRINT:
+            parse_centerprint(n);
             break;
         default:
             break;
@@ -120,6 +129,9 @@ static void parse_multicast(multicast_t *m)
         switch (((node_t *)n)->type) {
         case NODE_PRINT:
             parse_print(n);
+            break;
+        case NODE_CENTERPRINT:
+            parse_centerprint(n);
             break;
         default:
             break;
@@ -142,6 +154,9 @@ static void parse_message(void *n)
             break;
         case NODE_PRINT:
             parse_print(n);
+            break;
+        case NODE_CENTERPRINT:
+            parse_centerprint(n);
             break;
         case NODE_UNICAST:
             parse_unicast(n);
