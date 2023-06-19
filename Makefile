@@ -4,7 +4,7 @@ STRIP := strip
 
 TARGET := mvdtool
 
-SRCFILES := $(wildcard *.c)
+SRCFILES := $(wildcard src/*.c)
 OBJFILES := $(SRCFILES:%.c=%.o)
 
 all: $(TARGET)
@@ -13,7 +13,7 @@ default: $(TARGET)
 
 .PHONY: all default clean
 
--include *.d
+-include src/*.d
 
 $(TARGET): $(OBJFILES)
 	$(CC) -o $@ $(LDFLAGS) $^
@@ -22,4 +22,4 @@ strip: $(TARGET)
 	$(STRIP) $^
 
 clean:
-	rm -f $(TARGET) *.o *.d
+	rm -f $(TARGET) src/*.o src/*.d
