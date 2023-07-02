@@ -1742,6 +1742,8 @@ static void write_svc_serverdata(serverdata_t *s)
 
 static void write_svc_player(player_t *p)
 {
+    if (!p->bits && !p->statbits)
+        return;
     begin_block("playerstate");
     if (p->bits & PS_TYPE) write_int("pm_type", p->s.pm_type);
     if (p->bits & PS_ORIGIN) write_int_v("origin", p->s.origin, 3);

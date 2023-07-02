@@ -1486,6 +1486,11 @@ static void write_svc_serverdata(serverdata_t *s)
 
 static void write_svc_player(player_t *p)
 {
+    if (!p) {
+        write_uint16(0);
+        write_uint32(0);
+        return;
+    }
     write_uint16(p->bits);
     if (p->bits & PS_TYPE) write_uint8(p->s.pm_type);
     if (p->bits & PS_ORIGIN) write_int16_v(p->s.origin, 3);
