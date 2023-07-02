@@ -8,6 +8,7 @@
 #define MAX_CONFIGSTRINGS   2080
 #define MAX_CLIENTS         256
 #define MAX_EDICTS          1024
+#define MAX_ITEMS           256
 
 #define PROTOCOL_VERSION_DEFAULT        34
 #define PROTOCOL_VERSION_MVD            37

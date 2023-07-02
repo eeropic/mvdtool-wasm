@@ -17,9 +17,9 @@ typedef struct node_s {
         NODE_CENTERPRINT,
         NODE_BLOB,
         NODE_ENTITY,
-        NODE_PLAYER
+        NODE_PLAYER,
+        NODE_INVENTORY
     } type;
-    size_t start, end; // byte offsets in block, for debugging
 } node_t;
 
 #define F_PLAYER \
@@ -193,6 +193,11 @@ typedef struct {
     unsigned entity;
     unsigned weapon;
 } muzzleflash_t;
+
+typedef struct {
+    node_t node;
+    int inventory[MAX_ITEMS];
+} inventory_t;
 
 typedef struct {
     node_t node;

@@ -524,6 +524,15 @@ static node_t *parse_temp_entity(void)
     return NODE(t);
 }
 
+static node_t *parse_inventory(void)
+{
+    inventory_t *n = alloc_node(NODE_INVENTORY, sizeof(*n));
+
+    read_int16_v(n->inventory, MAX_ITEMS);
+
+    return NODE(n);
+}
+
 static node_t *_parse_svc(unsigned cmd)
 {
     node_t *n;
@@ -545,8 +554,9 @@ static node_t *_parse_svc(unsigned cmd)
     case svc_centerprint:
         n = parse_string(NODE_CENTERPRINT);
         break;
-    //case svc_inventory:
-    //    return; // TODO
+    case svc_inventory:
+        n = parse_inventory();
+        break;
     case svc_sound:
         n = parse_svc_sound();
         break;
@@ -1361,6 +1371,12 @@ static void write_temp_entity(tent_t *t)
     }
 }
 
+static void write_inventory(inventory_t *n)
+{
+    write_uint8(svc_inventory);
+    write_int16_v(n->inventory, MAX_ITEMS);
+}
+
 static void write_svc(void *n)
 {
     switch (((node_t *)n)->type) {
@@ -1378,6 +1394,9 @@ static void write_svc(void *n)
         break;
     case NODE_CENTERPRINT:
         write_svc_string(n, svc_centerprint);
+        break;
+    case NODE_INVENTORY:
+        write_inventory(n);
         break;
     case NODE_CONFIGSTRING:
         write_configstring(n, svc_configstring);

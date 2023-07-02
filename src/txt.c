@@ -799,6 +799,24 @@ static node_t *parse_tent(void)
     return NODE(t);
 }
 
+static node_t *parse_inventory(void)
+{
+    inventory_t *n = zalloc_node(NODE_INVENTORY, sizeof(*n));
+    int i = 0;
+
+    expect("{");
+    while (1) {
+        char *tok = parse();
+        if (!strcmp(tok, "}"))
+            break;
+        if (i == MAX_ITEMS)
+            fatal("too many items");
+        n->inventory[i++] = atoi(tok);
+    }
+
+    return NODE(n);
+}
+
 static node_t *parse_svc(void)
 {
     char *tok;
@@ -809,6 +827,7 @@ static node_t *parse_svc(void)
     if (!strcmp(tok, "layout")) return parse_svc_string(NODE_LAYOUT);
     if (!strcmp(tok, "stufftext")) return parse_svc_string(NODE_STUFFTEXT);
     if (!strcmp(tok, "centerprint")) return parse_svc_string(NODE_CENTERPRINT);
+    if (!strcmp(tok, "inventory")) return parse_inventory();
     if (!strcmp(tok, "configstring")) return parse_configstring();
     if (!strcmp(tok, "sound")) return parse_svc_sound();
     if (!strcmp(tok, "print")) return parse_print();
@@ -1179,6 +1198,7 @@ static node_t *parse_dm2_message(void)
     if (!strcmp(tok, "layout")) return parse_svc_string(NODE_LAYOUT);
     if (!strcmp(tok, "stufftext")) return parse_svc_string(NODE_STUFFTEXT);
     if (!strcmp(tok, "centerprint")) return parse_svc_string(NODE_CENTERPRINT);
+    if (!strcmp(tok, "inventory")) return parse_inventory();
     if (!strcmp(tok, "configstring")) return parse_configstring();
     if (!strcmp(tok, "sound")) return parse_svc_sound();
     if (!strcmp(tok, "print")) return parse_print();
@@ -1614,6 +1634,21 @@ static void write_temp_entity(tent_t *t)
     end_block();
 }
 
+static void write_inventory(inventory_t *n)
+{
+    int i, j;
+
+    begin_block("inventory");
+    for (i = MAX_ITEMS - 1; i >= 0; i--)
+        if (n->inventory[i])
+            break;
+    fprintf(ofp, "%s", make_indent());
+    for (j = 0; j <= i; j++)
+        fprintf(ofp, "%d ", n->inventory[j]);
+    fprintf(ofp, "\n");
+    end_block();
+}
+
 static void write_svc(void *n)
 {
     switch (((node_t *)n)->type) {
@@ -1631,6 +1666,9 @@ static void write_svc(void *n)
         break;
     case NODE_CENTERPRINT:
         write_string("centerprint", ((string_t *)n)->data);
+        break;
+    case NODE_INVENTORY:
+        write_inventory(n);
         break;
     case NODE_CONFIGSTRING:
         write_configstring(n);
