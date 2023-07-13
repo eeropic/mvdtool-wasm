@@ -41,7 +41,7 @@ demo_t *open_demo(const char *path, const char *mode)
     demo_t *demo;
     FILE *fp;
 
-    if (path) {
+    if (path && strcmp(path, "-")) {
         fp = fopen(path, mode);
         if (!fp)
             fatal("couldn't open %s: %s", path, strerror(errno));

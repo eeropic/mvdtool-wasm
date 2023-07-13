@@ -88,7 +88,7 @@ int split_main(void)
         return 1;
     }
 
-    ifp = open_demo(strcmp(cmd_argv[1], "-") ? cmd_argv[1] : NULL, "rb");
+    ifp = open_demo(cmd_argv[1], "rb");
 
     ofp = NULL;
     blocknum = 0;
