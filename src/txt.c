@@ -1017,7 +1017,7 @@ static node_t *parse_svc_serverdata(void)
         tok = parse();
         if (!strcmp(tok, "majorversion")) {
             s->majorversion = parse_uint32();
-            if (s->majorversion != PROTOCOL_VERSION_DEFAULT) {
+            if (s->majorversion < PROTOCOL_VERSION_OLD || s->majorversion > PROTOCOL_VERSION_DEFAULT) {
                 fatal("unknown major protocol version");
             }
         } else if (!strcmp(tok, "servercount")) {

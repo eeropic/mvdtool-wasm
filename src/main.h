@@ -28,6 +28,7 @@ typedef struct {
     FILE *fp;
     char *path;
     unsigned mode;
+    unsigned protocol;
     unsigned blocknum;
 } demo_t;
 

@@ -9,7 +9,7 @@ static struct {
     size_t head, tail;
 } msg;
 
-static unsigned mask_hack;
+static demo_t *current;
 
 //
 // reading
@@ -706,7 +706,7 @@ static node_t *parse_svc_serverdata(void)
 
     s = alloc_node(NODE_SERVERDATA, sizeof(*s));
     s->majorversion = read_uint32();
-    if (s->majorversion != PROTOCOL_VERSION_DEFAULT) {
+    if (s->majorversion < PROTOCOL_VERSION_OLD || s->majorversion > PROTOCOL_VERSION_DEFAULT) {
         fatal("unknown major protocol version");
     }
     s->servercount = read_uint32();
@@ -714,6 +714,7 @@ static node_t *parse_svc_serverdata(void)
     read_string(s->gamedir, sizeof(s->gamedir));
     s->clientnum = read_int16();
     read_string(s->levelname, sizeof(s->levelname));
+    current->protocol = s->majorversion;
 
     return NODE(s);
 }
@@ -796,7 +797,11 @@ static node_t *parse_svc_frame(void)
 
     f->number = read_uint32();
     f->delta = read_uint32();
-    f->suppressed = read_uint8();
+    if (current->protocol == PROTOCOL_VERSION_OLD) {
+        f->suppressed = 0;
+    } else {
+        f->suppressed = read_uint8();
+    }
     f->portalbits = parse_blob();
     if (read_uint8() != svc_playerinfo) {
         fatal("not playerinfo");
@@ -849,14 +854,12 @@ uint8_t *load_bin(demo_t *demo, size_t *size_p)
 
         read_raw(&magic, sizeof(magic), demo->fp);
         if (magic != MVD_MAGIC) {
-            static const uint8_t dm2_header[5] = { 0x0C, 0x22 };
-
             msglen = le32(magic);
             if (msglen < 14 || msglen > MAX_MSGLEN) {
                 fatal("unknown file format");
             }
             read_raw(msg.data, msglen, demo->fp);
-            if (memcmp(msg.data, dm2_header, sizeof(dm2_header))) {
+            if (msg.data[0] != svc_serverdata) {
                 fatal("unknown file format");
             }
             demo->mode |= MODE_DM2;
@@ -900,6 +903,8 @@ done:
 
 node_t *read_bin(demo_t *demo)
 {
+    current = demo;
+
     if (load_bin(demo, NULL)) {
         if (demo->mode & MODE_DM2) {
             return build_list(parse_dm2_message);
@@ -1035,7 +1040,11 @@ static void write_player(player_t *p)
 static unsigned extend_entity(const entity_t *e)
 {
     unsigned bits = e->bits & ~E_EXTENDED;
-    unsigned mask = 0xffff0000 | mask_hack;
+    unsigned mask = 0xffff0000;
+
+    if (current->mode & MODE_DM2) {
+        mask |= 0x8000;
+    }
 
     if (e->number & 0xff00) {
         bits |= E_NUMBER16;
@@ -1501,6 +1510,7 @@ static void write_svc_serverdata(serverdata_t *s)
     write_string(s->gamedir);
     write_int16(s->clientnum);
     write_string(s->levelname);
+    current->protocol = s->majorversion;
 }
 
 static void write_svc_player(player_t *p)
@@ -1538,7 +1548,8 @@ static void write_svc_frame(frame_t *f)
     write_uint8(svc_frame);
     write_uint32(f->number);
     write_uint32(f->delta);
-    write_uint8(f->suppressed);
+    if (current->protocol != PROTOCOL_VERSION_OLD)
+        write_uint8(f->suppressed);
     write_blob((blob_t *)f->portalbits);
     write_uint8(svc_playerinfo);
     write_svc_player((player_t *)f->players);
@@ -1568,17 +1579,17 @@ static void write_dm2_node(void *n)
 
 size_t write_bin(demo_t *demo, node_t *nodes)
 {
+    current = demo;
+
     msg.head = 0;
     msg.tail = MAX_MSGLEN;
 
     if (demo->mode & MODE_DM2) {
-        mask_hack = 0x8000;
         iter_list(nodes, write_dm2_node);
 
         uint32_t v = le32(msg.head);
         write_raw(&v, sizeof(v), demo->fp);
     } else {
-        mask_hack = 0;
         iter_list(nodes, write_mvd_node);
 
         if (!demo->blocknum) {

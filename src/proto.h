@@ -10,6 +10,7 @@
 #define MAX_EDICTS          1024
 #define MAX_ITEMS           256
 
+#define PROTOCOL_VERSION_OLD            26
 #define PROTOCOL_VERSION_DEFAULT        34
 #define PROTOCOL_VERSION_MVD            37
 
