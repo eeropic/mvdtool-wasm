@@ -907,6 +907,8 @@ node_t *read_bin(demo_t *demo)
 
     if (load_bin(demo, NULL)) {
         if (demo->mode & MODE_DM2) {
+            if (msg.tail == 0)
+                return alloc_node(NODE_DUMMY, sizeof(node_t));
             return build_list(parse_dm2_message);
         } else {
             return build_list(parse_mvd_message);
@@ -1561,6 +1563,8 @@ static void write_svc_frame(frame_t *f)
 static void write_dm2_node(void *n)
 {
     switch (((node_t *)n)->type) {
+    case NODE_DUMMY:
+        break;
     case NODE_SERVERDATA:
         write_svc_serverdata(n);
         break;

@@ -1210,6 +1210,7 @@ static node_t *parse_dm2_message(void)
 
 node_t *read_txt(demo_t *demo)
 {
+    node_t *n;
     char *tok;
 
     ifp = demo->fp;
@@ -1230,7 +1231,15 @@ node_t *read_txt(demo_t *demo)
         fatal("line %d: expected block, but got %s", line.number, tok);
     }
     expect("{");
-    return build_list((demo->mode & MODE_DM2) ? parse_dm2_message : parse_mvd_message);
+    if (demo->mode & MODE_DM2) {
+        n = build_list(parse_dm2_message);
+        if (!n) {
+            n = alloc_node(NODE_DUMMY, sizeof(*n));
+        }
+    } else {
+        n = build_list(parse_mvd_message);
+    }
+    return n;
 }
 
 //
@@ -1829,6 +1838,8 @@ static void write_svc_frame(frame_t *f)
 static void write_dm2_node(void *n)
 {
     switch (((node_t *)n)->type) {
+    case NODE_DUMMY:
+        break;
     case NODE_SERVERDATA:
         write_svc_serverdata(n);
         break;

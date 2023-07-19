@@ -1,6 +1,7 @@
 typedef struct node_s {
     struct node_s *next;
     enum {
+        NODE_DUMMY,
         NODE_NOP,
         NODE_GAMESTATE,
         NODE_SERVERDATA,
