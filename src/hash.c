@@ -14,7 +14,7 @@ int hash_main(void)
     uint8_t digest[20];
     int i;
 
-    demo_t *ifp = open_demo(cmd_argc > 1 ? cmd_argv[1] : NULL, "rb");
+    demo_t *ifp = open_demo(cmd_argc > 1 ? cmd_argv[1] : NULL, MODE_READ);
 
     while ((data = load_bin(ifp, &msglen))) {
         sha1_init(&ctx);
@@ -29,4 +29,3 @@ int hash_main(void)
 
     return 0;
 }
-

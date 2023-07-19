@@ -109,8 +109,8 @@ int cut_main(void)
         return 1;
     }
 
-    ifp = open_demo(cmd_argv[1], "rb");
-    ofp = open_demo(cmd_argv[2], "wb");
+    ifp = open_demo(cmd_argv[1], MODE_READ);
+    ofp = open_demo(cmd_argv[2], MODE_WRITE);
 
     blocknum = 0;
     got_gamestate = false;

@@ -88,7 +88,7 @@ int split_main(void)
         return 1;
     }
 
-    ifp = open_demo(cmd_argv[1], "rb");
+    ifp = open_demo(cmd_argv[1], MODE_READ);
 
     ofp = NULL;
     blocknum = 0;
@@ -100,7 +100,7 @@ int split_main(void)
         if (blocknum == sp->start) {
             node_t *s;
 
-            ofp = open_demo(sp->filename, "wb");
+            ofp = open_demo(sp->filename, MODE_WRITE);
             if (!got_gamestate) {
                 s = world_delta(NULL, &world);
                 write_demo(ofp, s);

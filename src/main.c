@@ -36,28 +36,31 @@ void write_raw(void *buf, size_t len, FILE *fp)
     }
 }
 
-demo_t *open_demo(const char *path, const char *mode)
+demo_t *open_demo(const char *path, unsigned mode)
 {
     demo_t *demo;
     FILE *fp;
 
     if (path && strcmp(path, "-")) {
-        fp = fopen(path, mode);
+        char str[3];
+        if (mode & MODE_WRITE)
+            strcpy(str, "w");
+        else
+            strcpy(str, "r");
+        if (!(mode & MODE_TXT))
+            strcat(str, "b");
+        fp = fopen(path, str);
         if (!fp)
             fatal("couldn't open %s: %s", path, strerror(errno));
-    } else if (*mode == 'r') {
-        fp = stdin;
-    } else if (*mode == 'w') {
+        mode |= MODE_FILE;
+    } else if (mode & MODE_WRITE) {
         fp = stdout;
     } else {
-        fatal("bad mode");
+        fp = stdin;
     }
 
     demo = calloc(1, sizeof(*demo));
-    if (*mode == 'w')
-        demo->mode |= MODE_WRITE;
-    if (mode[1] != 'b')
-        demo->mode |= MODE_TXT;
+    demo->mode = mode;
     demo->fp = fp;
     if (path)
         demo->path = strdup(path);
@@ -81,7 +84,12 @@ void close_demo(demo_t *demo)
         }
     }
 
-    if (demo->path && fclose(demo->fp))
+    int r = 0;
+    if (demo->mode & MODE_FILE)
+        r = fclose(demo->fp);
+    else if (demo->mode & MODE_WRITE)
+        r = fflush(demo->fp);
+    if (r)
         fatal("failed to write file");
 
     free(demo->path);
@@ -189,10 +197,10 @@ int main(int argc, char **argv)
     cmd_argv = argv + 1;
 
     if (!strcmp(name, "bin2txt")) {
-        return bin2txt_main();
+        return convert_main(0, MODE_TXT);
     }
     if (!strcmp(name, "txt2bin")) {
-        return txt2bin_main();
+        return convert_main(MODE_TXT, 0);
     }
     if (!strcmp(name, "hash")) {
         return hash_main();

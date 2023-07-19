@@ -174,7 +174,7 @@ int strings_main(void)
 {
     node_t *n;
 
-    ifp = open_demo(cmd_argc > 1 ? cmd_argv[1] : NULL, "rb");
+    ifp = open_demo(cmd_argc > 1 ? cmd_argv[1] : NULL, MODE_READ);
 
     while ((n = read_demo(ifp))) {
         parse_message(n);

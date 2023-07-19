@@ -18,8 +18,8 @@ int diff_main(void)
         return 1;
     }
 
-    ifp1 = open_demo(cmd_argv[1], "rb");
-    ifp2 = open_demo(cmd_argv[2], "rb");
+    ifp1 = open_demo(cmd_argv[1], MODE_READ);
+    ifp2 = open_demo(cmd_argv[2], MODE_READ);
 
     blocknum = 0;
     while (1) {
