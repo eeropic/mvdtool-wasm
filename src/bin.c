@@ -854,14 +854,10 @@ uint8_t *load_bin(demo_t *demo, size_t *size_p)
 
         read_raw(&magic, sizeof(magic), demo->fp);
         if (magic != MVD_MAGIC) {
+            if (magic == (uint32_t)-1) {
+                return NULL;
+            }
             msglen = le32(magic);
-            if (msglen < 14 || msglen > MAX_MSGLEN) {
-                fatal("unknown file format");
-            }
-            read_raw(msg.data, msglen, demo->fp);
-            if (msg.data[0] != svc_serverdata) {
-                fatal("unknown file format");
-            }
             demo->mode |= MODE_DM2;
             goto done;
         }
@@ -885,12 +881,12 @@ uint8_t *load_bin(demo_t *demo, size_t *size_p)
         msglen = le16(v);
     }
 
+done:
     if (msglen > MAX_MSGLEN) {
         fatal("msglen > MAX_MSGLEN");
     }
 
     read_raw(msg.data, msglen, demo->fp);
-done:
     msg.head = 0;
     msg.tail = msglen;
 

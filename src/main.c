@@ -113,13 +113,6 @@ node_t *read_demo(demo_t *demo)
 
 size_t write_demo(demo_t *demo, node_t *n)
 {
-    if (!demo->blocknum) {
-        if (n->type == NODE_SERVERDATA)
-            demo->mode |= MODE_DM2;
-        else if (n->type != NODE_GAMESTATE)
-            fatal("first node isn't serverdata");
-    }
-
     size_t r = (demo->mode & MODE_TXT) ? write_txt(demo, n) : write_bin(demo, n);
     demo->blocknum++;
     return r;

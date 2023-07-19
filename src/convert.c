@@ -8,14 +8,16 @@
 
 int convert_main(unsigned imode, unsigned omode)
 {
-    node_t *n;
-
     demo_t *ifp = open_demo(cmd_argc > 1 ? cmd_argv[1] : NULL, imode);
+    node_t *n = read_demo(ifp);
+
+    omode |= ifp->mode & MODE_DM2;
     demo_t *ofp = open_demo(cmd_argc > 2 ? cmd_argv[2] : NULL, omode | MODE_WRITE);
 
-    while ((n = read_demo(ifp))) {
+    while (n) {
         write_demo(ofp, n);
         free_nodes(n);
+        n = read_demo(ifp);
     }
 
     close_demo(ifp);
