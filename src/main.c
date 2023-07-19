@@ -98,15 +98,16 @@ void close_demo(demo_t *demo)
 
 node_t *read_demo(demo_t *demo)
 {
-    node_t *n = NULL;
+    node_t *n;
 
-    if (!(demo->mode & MODE_EOF)) {
-        n = (demo->mode & MODE_TXT) ? read_txt(demo) : read_bin(demo);
-        if (!n)
-            demo->mode |= MODE_EOF;
-        else
-            demo->blocknum++;
-    }
+    if (demo->mode & MODE_EOF)
+        return NULL;
+
+    n = (demo->mode & MODE_TXT) ? read_txt(demo) : read_bin(demo);
+    if (!n)
+        demo->mode |= MODE_EOF;
+    else
+        demo->blocknum++;
     return n;
 }
 
