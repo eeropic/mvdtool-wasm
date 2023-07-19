@@ -1238,6 +1238,9 @@ node_t *read_txt(demo_t *demo)
         }
     } else {
         n = build_list(parse_mvd_message);
+        if (!n) {
+            fatal("line %d: empty blocks are not allowed", line.number);
+        }
     }
     return n;
 }

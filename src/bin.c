@@ -1601,8 +1601,10 @@ size_t write_bin(demo_t *demo, node_t *nodes)
             write_raw(&v, sizeof(v), demo->fp);
         }
 
-        uint16_t v = le16(msg.head);
-        write_raw(&v, sizeof(v), demo->fp);
+        if (msg.head) {
+            uint16_t v = le16(msg.head);
+            write_raw(&v, sizeof(v), demo->fp);
+        }
     }
 
     write_raw(msg.data, msg.head, demo->fp);
