@@ -1,49 +1,79 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>mvdtool WebAssembly Demo</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>mvdtool WebAssembly Demo</h1>
-    <input type="file" id="fileInput">
+    <input type="file" id="fileInput" />
     <button onclick="runMvdtool()">Run mvdtool</button>
 
     <script>
-        var Module = {
-            print: function(text) { console.log('PERSE', text); },
-            printErr: function(text) { console.error('JUTTU', text); },
-            onRuntimeInitialized: function() {
-                // We can now run functions in the WebAssembly module
-                console.log('WASM Loaded');
-            }
-        };
+      var Module = {
+        print: function (text) {
+          console.log("Output:", text)
+        },
+        printErr: function (text) {
+          console.error("Error:", text)
+        },
+        onRuntimeInitialized: function () {
+          console.log("WASM Loaded")
+          // Wrapping the C function that takes two strings and returns a string
+          Module.runMvdtool = Module.cwrap("main", "number", [
+            "number",
+            "array",
+          ])
+        },
+        noInitialRun: true,
+      }
 
-        function runMvdtool() {
-            var fileInput = document.getElementById('fileInput');
-            var file = fileInput.files[0];
+      function runMvdtool() {
+        var fileInput = document.getElementById("fileInput")
+        var file = fileInput.files[0]
 
-            if (!file) {
-                alert('Please select a file first.');
-                return;
-            }
-
-            var reader = new FileReader();
-            reader.onload = function(event) {
-                // Write the file content to the virtual file system
-                var data = new Uint8Array(event.target.result);
-                Module.FS_createDataFile("/", "myfile.mvd2", data, true, true);
-
-                // Pass arguments to the WASM module
-                var args = ['mvdtool', 'strings', 'myfile.mvd2'];
-                Module.callMain(args);
-            };
-
-            reader.readAsArrayBuffer(file);
+        if (!file) {
+          alert("Please select a file first.")
+          return
         }
+
+        var reader = new FileReader()
+        reader.onload = function (event) {
+          var data = new Uint8Array(event.target.result)
+          Module.FS_createDataFile("/", "demo.mvd2", data, true, true)
+
+          var args = ["mvdtool", "strings", "demo.mvd2"]
+
+          var argv = Module._malloc(args.length * 4)
+          var argvPointers = []
+
+          for (var i = 0; i < args.length; i++) {
+            var argPtr = Module._malloc(Module.lengthBytesUTF8(args[i]) + 1)
+            Module.stringToUTF8(
+              args[i],
+              argPtr,
+              Module.lengthBytesUTF8(args[i]) + 1
+            )
+            Module.setValue(argv + i * 4, argPtr, "i32")
+            argvPointers.push(argPtr)
+          }
+
+          Module.ccall(
+            "main",
+            "number",
+            ["number", "number"],
+            [args.length, argv]
+          )
+
+          for (var i = 0; i < argvPointers.length; i++) {
+            Module._free(argvPointers[i])
+          }
+          Module._free(argv)
+        }
+        reader.readAsArrayBuffer(file)
+      }
     </script>
 
     {{{ SCRIPT }}}
-
-</body>
+  </body>
 </html>

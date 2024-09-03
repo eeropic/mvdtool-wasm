@@ -10,8 +10,8 @@ NATIVE_STRIP := strip
 NATIVE_TARGET := mvdtool
 
 WASM_CC := emcc
-WASM_CFLAGS := -MMD -g -O2 -Wall -Wextra
-WASM_LDFLAGS := -g -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS='["callMain", "ccall", "cwrap"]' -s ASSERTIONS=2 -g4 -s SAFE_HEAP=1 -s INITIAL_MEMORY=64MB -s MAXIMUM_MEMORY=256MB -s STACK_SIZE=64KB
+WASM_CFLAGS := -MMD -gsource-map -O2 -Wall -Wextra
+WASM_LDFLAGS := -g -s FORCE_FILESYSTEM=1 -s EXPORTED_FUNCTIONS='["_main", "_malloc", "_free"]' -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "allocate", "stringToUTF8", "UTF8ToString", "lengthBytesUTF8", "setValue", "getValue"]' -s ASSERTIONS=2 -gsource-map -s SAFE_HEAP=1 -s INITIAL_MEMORY=64MB -s MAXIMUM_MEMORY=256MB -s STACK_SIZE=64KB
 WASM_TARGET := output-web/mvdtool.html
 WASM_SHELL := --shell-file src-web/shell_minimal.html
 
