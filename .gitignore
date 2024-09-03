@@ -1,0 +1,6 @@
+src/*.o
+src/*.d
+temp/**
+mvdtool
+.DS_Store
+output-web/

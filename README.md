@@ -58,3 +58,7 @@ Split demo into two parts, from 5:00 to 10:00, and from 15:00 to 20:00:
 Remove two parts of the demo, from 1:00 to 2:00, and from 5:00 to 6:00:
 
     mvdtool cut input.mvd2 output.mvd2 1:00,2:00 5:00,6:00
+
+# WASM
+
+```make wasm```

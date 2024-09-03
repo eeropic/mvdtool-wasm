@@ -1,25 +1,52 @@
-CFLAGS := -MMD -g -O2 -Wall -Wextra
-LDFLAGS := -g
-STRIP := strip
-
-TARGET := mvdtool
+MODE := native
 
 SRCFILES := $(wildcard src/*.c)
 OBJFILES := $(SRCFILES:%.c=%.o)
 
-all: $(TARGET)
+NATIVE_CC := gcc
+NATIVE_CFLAGS := -MMD -g -O2 -Wall -Wextra
+NATIVE_LDFLAGS := -g
+NATIVE_STRIP := strip
+NATIVE_TARGET := mvdtool
 
-default: $(TARGET)
+WASM_CC := emcc
+WASM_CFLAGS := -MMD -g -O2 -Wall -Wextra
+WASM_LDFLAGS := -g -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS='["callMain", "ccall", "cwrap"]' -s ASSERTIONS=2 -g4 -s SAFE_HEAP=1 -s INITIAL_MEMORY=64MB -s MAXIMUM_MEMORY=256MB -s STACK_SIZE=64KB
+WASM_TARGET := output-web/mvdtool.html
+WASM_SHELL := --shell-file src-web/shell_minimal.html
 
-.PHONY: all default clean
+all: $(MODE)
 
--include src/*.d
+.PHONY: all native wasm clean strip
 
-$(TARGET): $(OBJFILES)
+native: MODE := native
+native: CC := $(NATIVE_CC)
+native: CFLAGS := $(NATIVE_CFLAGS)
+native: LDFLAGS := $(NATIVE_LDFLAGS)
+native: STRIP := $(NATIVE_STRIP)
+native: TARGET := $(NATIVE_TARGET)
+native: $(NATIVE_TARGET)
+
+wasm: MODE := wasm
+wasm: CC := $(WASM_CC)
+wasm: CFLAGS := $(WASM_CFLAGS)
+wasm: LDFLAGS := $(WASM_LDFLAGS)
+wasm: TARGET := $(WASM_TARGET)
+wasm: $(WASM_TARGET)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(NATIVE_TARGET): $(OBJFILES)
 	$(CC) -o $@ $(LDFLAGS) $^
 
-strip: $(TARGET)
+$(WASM_TARGET): $(OBJFILES)
+	mkdir -p output-web
+	$(CC) $(OBJFILES) $(LDFLAGS) -o $@ $(WASM_SHELL)
+
+strip: $(NATIVE_TARGET)
 	$(STRIP) $^
 
 clean:
-	rm -f $(TARGET) src/*.o src/*.d
+	rm -f $(NATIVE_TARGET) $(WASM_TARGET) src/*.o src/*.d
+	rm -rf output-web
