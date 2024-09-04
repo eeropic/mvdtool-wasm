@@ -2,13 +2,13 @@ import createMvdToolModule from '../output-web/mvdtool.js'
 
 async function initializeWasm() {
     const moduleOverrides = {
-        print: function (text) {
-            console.log("Output:", text);
+        print(text) {
+            // console.log("Output:", text);
         },
-        printErr: function (text) {
+        printErr(text) {
             console.error("Error:", text);
         },
-        onRuntimeInitialized: function () {
+        onRuntimeInitialized() {
             console.log("WASM Loaded");
             Module.runMvdtool = Module.cwrap("main", "number", ["number", "array"]);
         },
@@ -53,7 +53,8 @@ async function runMvdtool() {
 
         try {
             const output = Module.FS_readFile(outputFilename, { encoding: "utf8" });
-            console.log("Output File Content:", output);
+            // console.log("Output File Content:", output);
+            document.getElementById('output').innerText = output
         } catch (err) {
             console.error("Error reading output file:", err);
         }

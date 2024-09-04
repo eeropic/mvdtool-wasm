@@ -8,6 +8,8 @@ html, body {
   flex-direction: column;
   gap: 16px;
   padding: 16px;
+
+  color: #aaa;
 }
 
 a, h1, h2, h3, input {
