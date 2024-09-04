@@ -3,17 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>mvdtool WebAssembly</title>
+    <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <h1>mvdtool WebAssembly Demo</h1>
+    <h3>mvdtool for quake2 demos (wasm)</h3>
+    <a href="https://git.skuller.net/mvdtool/" target="_blank">original mvdtool by Skuller</a>
     <input type="file" id="fileInput" />
-    <button onclick="runMvdtool()">Run mvdtool</button>
+    <button id="run-button">Run mvdtool</button>
     <pre id="output"></pre>
-
-    <script src="init.js"></script>
-
-    <script src="../output-web/mvdtool.js"></script>
-
-    <script src="main.js"></script>
+    <script src="main.js" type="module"></script>
   </body>
 </html>
