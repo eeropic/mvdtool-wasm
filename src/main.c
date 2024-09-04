@@ -3,6 +3,7 @@
 #include "node.h"
 #include "bin.h"
 #include "txt.h"
+#include "txt_json.h"
 #include "option.h"
 
 void fatal(const char *fmt, ...)
@@ -113,7 +114,14 @@ node_t *read_demo(demo_t *demo)
 
 size_t write_demo(demo_t *demo, node_t *n)
 {
-    size_t r = (demo->mode & MODE_TXT) ? write_txt(demo, n) : write_bin(demo, n);
+    size_t r;
+    if (demo->mode & MODE_JSON) {
+        r = write_txt_json(demo, n);
+    } else if (demo->mode & MODE_TXT) {
+        r = write_txt(demo, n);
+    } else {
+        r = write_bin(demo, n);
+    }
     demo->blocknum++;
     return r;
 }
@@ -193,6 +201,9 @@ int main(int argc, char **argv)
     if (!strcmp(name, "bin2txt")) {
         return convert_main(0, MODE_TXT);
     }
+    if (!strcmp(name, "bin2json")) {
+        return convert_main(0, MODE_JSON);
+    }
     if (!strcmp(name, "txt2bin")) {
         return convert_main(MODE_TXT, 0);
     }
@@ -216,7 +227,7 @@ int main(int argc, char **argv)
     }
 
 usage:
-    fprintf(stderr, "Usage: %s <bin2txt|txt2bin|hash|strings|split|cut|diff|help> [options]\n", argv[0]);
+    fprintf(stderr, "Usage: %s <bin2txt|bin2json|txt2bin|hash|strings|split|cut|diff|help> [options]\n", argv[0]);
     return 1;
 }
 

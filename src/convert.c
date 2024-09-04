@@ -3,6 +3,7 @@
 #include "node.h"
 #include "bin.h"
 #include "txt.h"
+#include "txt_json.h"
 #include "swap.h"
 #include "option.h"
 

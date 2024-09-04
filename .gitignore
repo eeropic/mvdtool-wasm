@@ -4,3 +4,4 @@ temp/**
 mvdtool
 .DS_Store
 output-web/
+.vscode

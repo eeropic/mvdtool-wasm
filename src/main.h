@@ -22,6 +22,7 @@ bool parse_timespec(const char *s, unsigned *blocknum);
 #define MODE_TXT    4
 #define MODE_EOF    8
 #define MODE_FILE   16
+#define MODE_JSON   32
 
 struct node_s;
 typedef struct node_s node_t;
