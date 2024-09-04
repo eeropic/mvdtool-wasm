@@ -1,3 +1,4 @@
+import JSON5 from './json5.min.mjs'
 import createMvdToolModule from '../output-web/mvdtool.js'
 
 async function initializeWasm() {
